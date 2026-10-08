@@ -9,7 +9,7 @@ from api.core.security import generate_temp_password, hash_password, verify_pass
 from api.deps import CurrentUser, Permission, get_user_or_404, has_permission, require
 from api.routes.models.user import PasswordChange, UserCreate, UserList, UserOut
 from api.services import users as svc
-from database.models import PasswordResetToken, Role, User
+from database.models import Department, PasswordResetToken, Role, User
 from database.session import get_db
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -29,8 +29,14 @@ def _self_or(permission: Permission, user: CurrentUser, user_id: int) -> None:
     dependencies=[Depends(require(Permission.users_create))],
 )
 def create_user(body: UserCreate, bg: BackgroundTasks, db: DB) -> User:
+    if body.department_id is not None and db.get(Department, body.department_id) is None:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Unknown department")
+    svc.ensure_unique(db, email=body.email, username=body.username, employee_id=body.employee_id)
     user = User(
         email=body.email,
+        username=body.username,
+        employee_id=body.employee_id,
+        department_id=body.department_id,
         full_name=body.full_name,
         role=body.role,
         password_hash=hash_password(body.password or generate_temp_password()),
@@ -40,7 +46,8 @@ def create_user(body: UserCreate, bg: BackgroundTasks, db: DB) -> User:
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status.HTTP_409_CONFLICT, "A user with this email already exists")
+        raise HTTPException(status.HTTP_409_CONFLICT, "Email, username or employee ID already registered")
+    db.refresh(user)
     if body.password is None:
         svc.send_welcome(db, bg, user)
     return user

@@ -57,13 +57,15 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Realtime Face Attendance Service", lifespan=lifespan)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific origins
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# When mounted inside the main API (INFERENCE_EMBEDDED=true) the main app owns CORS and authentication.
+if os.getenv("INFERENCE_EMBEDDED", "false").lower() != "true":
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],  # In production, replace with specific origins
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 os.makedirs(config.TESTING_UPLOADS_DIR, exist_ok=True)
 app.mount("/testing-ui", StaticFiles(directory=config.TESTING_DIR, html=True), name="testing-ui")

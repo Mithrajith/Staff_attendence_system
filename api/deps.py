@@ -23,6 +23,7 @@ class Permission(str, Enum):
     users_read_any = "users:read_any"
     users_manage = "users:manage"  # activate / deactivate / delete
     users_set_password_any = "users:set_password_any"
+    departments_manage = "departments:manage"
     attendance_mark_self = "attendance:mark_self"  # check in / out as yourself
     attendance_read_any = "attendance:read_any"  # all users' records and raw events
 

@@ -2,7 +2,7 @@ from datetime import date, datetime, timezone
 from enum import Enum
 
 from sqlalchemy import Boolean, Date, DateTime, Enum as SAEnum, Float, ForeignKey, Index, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database.session import Base
 
@@ -18,11 +18,25 @@ class Role(str, Enum):
     staff = "staff"
 
 
+class Department(Base):
+    __tablename__ = "departments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    code: Mapped[str] = mapped_column(String(16), unique=True)  # business id, e.g. "002"
+    name: Mapped[str] = mapped_column(String(100), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
 class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     email: Mapped[str] = mapped_column(String(254), unique=True, index=True)
+    username: Mapped[str | None] = mapped_column(String(32), unique=True, nullable=True)
+    employee_id: Mapped[str | None] = mapped_column(String(32), unique=True, nullable=True)
+    department_id: Mapped[int | None] = mapped_column(ForeignKey("departments.id"), nullable=True, index=True)
+    department: Mapped[Department | None] = relationship(lazy="joined")
     full_name: Mapped[str] = mapped_column(String(120))
     password_hash: Mapped[str] = mapped_column(String(255))
     role: Mapped[Role] = mapped_column(
@@ -32,9 +46,15 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     # Bumped on every password change; tokens carrying an older value are rejected.
     token_version: Mapped[int] = mapped_column(Integer, default=0)
+    # Set once the user's face embeddings are ingested into the vector DB.
+    face_enrolled_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    @property
+    def face_enrolled(self) -> bool:
+        return self.face_enrolled_at is not None
 
 
 class PasswordResetToken(Base):

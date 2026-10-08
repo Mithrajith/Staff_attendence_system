@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from fastapi import BackgroundTasks
+from fastapi import BackgroundTasks, HTTPException, status
 from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
@@ -8,6 +8,14 @@ from api.core.config import get_settings
 from api.core.mailer import send_email
 from api.core.security import hash_password, hash_reset_token, new_reset_token
 from database.models import PasswordResetToken, User, utcnow
+
+
+def ensure_unique(db: Session, *, email: str, username: str | None, employee_id: str | None) -> None:
+    """Raises 409 naming the conflicting field. Checks MySQL before any account or face data is created."""
+    checks = [("Email", User.email, email), ("Username", User.username, username), ("Employee ID", User.employee_id, employee_id)]
+    for label, column, value in checks:
+        if value is not None and db.scalar(select(User.id).where(column == value)) is not None:
+            raise HTTPException(status.HTTP_409_CONFLICT, f"{label} already registered")
 
 
 def _issue_reset_token(db: Session, user: User) -> str:

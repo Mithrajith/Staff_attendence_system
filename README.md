@@ -167,8 +167,12 @@ Endpoints under `/api/v1` (Swagger at `/docs` when `APP_ENV=development`):
 
 | Method | Path | Access |
 |---|---|---|
-| POST | `/auth/login` | public |
+| POST | `/auth/login` (username or email) | public |
+| POST | `/auth/signup` | public (staff user name, employee id, department, email, password; `SIGNUP_ENABLED`) |
 | POST | `/auth/forgot-password`, `/auth/reset-password` | public (emailed single-use token) |
+| GET | `/departments` | public (sign-up dropdown) |
+| POST / PUT / DELETE | `/departments`, `/departments/{id}` | admin (`{code, name}`; delete blocked while users are assigned) |
+| GET / POST | `/face/enrollment`, `/face/enroll` | staff, admin (checks MySQL + Qdrant for an existing enrollment/face, then ingests) |
 | POST / GET | `/users` | admin (create / list) |
 | GET | `/users/me` | any user |
 | GET | `/users/{id}` | admin or self |
@@ -177,6 +181,12 @@ Endpoints under `/api/v1` (Swagger at `/docs` when `APP_ENV=development`):
 | PUT | `/users/{id}/password` | self (needs `current_password`) or admin |
 
 `APP_ENV=production` refuses to start with weak/placeholder secrets, console email, or wildcard CORS, and disables `/docs`.
+
+**Web page:** `GET /` serves the login / sign-up / reset-password page. After sign-up (or login without enrolled face) a consent dialog precedes the webcam capture, which posts to `/face/enroll`. Set `FRONTEND_URL` to the API's public URL so reset emails link to `/reset-password?token=...`.
+
+**Inference service** is mounted at `/api/v1/inference/*` (health, `/ws/stream/{id}?token=<jwt>`, recognize, testing...). Admins may call everything; other users only the live stream and health.
+
+Seed departments (idempotent, matched by code): `uv run python -m api.cli seed-departments 247=AIML "002=CSE(CY)"`
 
 ### Attendance
 

@@ -9,7 +9,7 @@ import os
 import sys
 
 from api.core.security import hash_password
-from database.models import Role, User
+from database.models import Department, Role, User
 from database.session import get_db
 
 
@@ -31,13 +31,39 @@ def create_admin(email: str, name: str) -> int:
     return 0
 
 
+def seed_departments(items: list[str]) -> int:
+    """Idempotent upsert of CODE=NAME pairs (matched by code)."""
+    db = next(get_db())
+    try:
+        for item in items:
+            code, sep, name = item.partition("=")
+            code, name = code.strip(), name.strip()
+            if not sep or not code or not name:
+                print(f"Bad entry {item!r}; expected CODE=NAME", file=sys.stderr)
+                return 1
+            dept = db.query(Department).filter(Department.code == code).first()
+            if dept:
+                dept.name = name
+            else:
+                db.add(Department(code=code, name=name))
+            db.commit()
+            print(f"{code}: {name}")
+    finally:
+        db.close()
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(prog="api.cli")
     sub = parser.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("create-admin")
     p.add_argument("--email", required=True)
     p.add_argument("--name", required=True)
+    d = sub.add_parser("seed-departments", help='e.g. seed-departments 247=AIML "002=CSE(CY)"')
+    d.add_argument("items", nargs="+", metavar="CODE=NAME")
     args = parser.parse_args()
+    if args.cmd == "seed-departments":
+        return seed_departments(args.items)
     return create_admin(args.email, args.name)
 
 

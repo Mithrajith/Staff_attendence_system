@@ -8,6 +8,7 @@ os.environ.update(
     JWT_SECRET_KEY="x" * 48,
     DATABASE_URL=f"sqlite:///{_tmp}/test.db",
     EMAIL_BACKEND="console",
+    INFERENCE_MOUNT_ENABLED="false",  # keeps torch out of the unit tests
 )
 
 import pytest  # noqa: E402
@@ -50,7 +51,7 @@ def make_user(email, role=Role.staff, active=True):
 
 
 def login(client, email, password=PW):
-    r = client.post(f"{P}/auth/login", json={"email": email, "password": password})
+    r = client.post(f"{P}/auth/login", json={"username": email, "password": password})
     return r
 
 
@@ -165,9 +166,9 @@ def test_forgot_and_reset_password(client, emails):
     make_user("s@x.com")
     make_user("off@x.com", active=False)
     old = auth(client, "s@x.com")
-    r1 = client.post(f"{P}/auth/forgot-password", json={"email": "s@x.com"})
-    r2 = client.post(f"{P}/auth/forgot-password", json={"email": "ghost@x.com"})
-    client.post(f"{P}/auth/forgot-password", json={"email": "off@x.com"})
+    r1 = client.post(f"{P}/auth/forgot-password", json={"username": "s@x.com"})
+    r2 = client.post(f"{P}/auth/forgot-password", json={"username": "ghost@x.com"})
+    client.post(f"{P}/auth/forgot-password", json={"username": "off@x.com"})
     assert r1.status_code == r2.status_code == 202 and r1.json() == r2.json()
     assert [e[0] for e in emails] == ["s@x.com"]
     token = re.search(r"token=(.+)$", emails[0][2]["link"]).group(1)
@@ -180,7 +181,7 @@ def test_forgot_and_reset_password(client, emails):
 
 def test_expired_reset_token(client, emails, monkeypatch):
     make_user("s@x.com")
-    client.post(f"{P}/auth/forgot-password", json={"email": "s@x.com"})
+    client.post(f"{P}/auth/forgot-password", json={"username": "s@x.com"})
     token = re.search(r"token=(.+)$", emails[0][2]["link"]).group(1)
     from datetime import timedelta
     from database import models

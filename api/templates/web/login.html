@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Staff Attendance</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.6 system-ui, -apple-system, "Segoe UI", Arial, sans-serif; background: #fff; color: #111; }
+  main { max-width: 340px; margin: 12vh auto 48px; padding: 0 20px; }
+  h1 { font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #666; margin: 0 0 40px; }
+  h2 { font-size: 22px; font-weight: 600; margin: 0 0 24px; }
+  .card { border: 0; padding: 0; }
+  label { display: block; margin: 20px 0 2px; font-size: 12px; color: #666; }
+  input, select { width: 100%; padding: 8px 0; font: inherit; border: 0; border-bottom: 1px solid #ccc; border-radius: 0; background: transparent; color: inherit; outline: 0; }
+  input:focus, select:focus { border-bottom-color: #111; }
+  button { padding: 9px 18px; font: inherit; border: 1px solid #111; border-radius: 0; background: #111; color: #fff; cursor: pointer; }
+  button.secondary { background: #fff; color: #111; border-color: #ccc; }
+  button:disabled { opacity: .4; cursor: default; }
+  .row { display: flex; gap: 8px; margin-top: 32px; flex-wrap: wrap; }
+  .links { margin-top: 24px; font-size: 13px; }
+  .links a { color: #666; cursor: pointer; margin-right: 16px; text-decoration: underline; }
+  .msg { margin-top: 16px; font-size: 13px; min-height: 1.2em; color: #666; }
+  .msg.err { color: #b42318; }
+  .msg.ok { color: #1a7f37; }
+  .hidden { display: none; }
+  video { width: 100%; background: #f2f2f2; }
+  .shots { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 8px; }
+  .shots img { width: 56px; height: 42px; object-fit: cover; }
+  dialog { max-width: 380px; border: 1px solid #ccc; border-radius: 0; padding: 28px; color: #111; }
+  dialog h2 { font-size: 18px; margin-bottom: 12px; }
+  dialog p { margin: 0 0 8px; color: #444; }
+  dialog::backdrop { background: rgba(255, 255, 255, .85); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Staff Attendance</h1>
+ 
+  <section id="login" class="card">
+    <h2>Log in</h2>
+    <form id="loginForm">
+      <label for="l-user">User name</label>
+      <input id="l-user" autocomplete="username" required>
+      <label for="l-pass">Password</label>
+      <input id="l-pass" type="password" autocomplete="current-password" required>
+      <div class="row"><button type="submit">Log in</button></div>
+      <div class="msg" id="loginMsg"></div>
+    </form>
+    <div class="links"><a data-go="signup">Sign up</a><a data-go="forgot">Reset password</a></div>
+  </section>
+
+  <section id="signup" class="card hidden">
+    <h2>Sign up</h2>
+    <form id="signupForm">
+      <label for="s-user">Staff user name</label>
+      <input id="s-user" autocomplete="username" pattern="[A-Za-z0-9._\-]{3,32}" title="3-32 letters, digits, . _ -" required>
+      <label for="s-emp">Employee ID</label>
+      <input id="s-emp" pattern="[A-Za-z0-9_\-]{1,32}" title="Letters, digits, _ -" required>
+      <label for="s-dept">Department</label>
+      <select id="s-dept" required><option value="">Select department</option></select>
+      <label for="s-email">Email</label>
+      <input id="s-email" type="email" autocomplete="email" required>
+      <label for="s-pass">Password (min 10 characters)</label>
+      <input id="s-pass" type="password" autocomplete="new-password" minlength="10" required>
+      <div class="row"><button type="submit">Continue</button></div>
+      <div class="msg" id="signupMsg"></div>
+    </form>
+    <div class="links"><a data-go="login">Back to log in</a></div>
+  </section>
+
+  <section id="forgot" class="card hidden">
+    <h2>Reset password</h2>
+    <form id="forgotForm">
+      <label for="f-user">User name or email</label>
+      <input id="f-user" required>
+      <div class="row"><button type="submit">Send reset link</button></div>
+      <div class="msg" id="forgotMsg"></div>
+    </form>
+    <div class="links"><a data-go="login">Back to log in</a></div>
+  </section>
+
+  <section id="reset" class="card hidden">
+    <h2>Set a new password</h2>
+    <form id="resetForm">
+      <label for="r-pass">New password (min 10 characters)</label>
+      <input id="r-pass" type="password" autocomplete="new-password" minlength="10" required>
+      <div class="row"><button type="submit">Change password</button></div>
+      <div class="msg" id="resetMsg"></div>
+    </form>
+    <div class="links"><a data-go="login">Back to log in</a></div>
+  </section>
+
+  <section id="capture" class="card hidden">
+    <h2>Face capture</h2>
+    <video id="video" autoplay playsinline muted></video>
+    <div class="shots" id="shots"></div>
+    <div class="msg" id="capCount"></div>
+    <div class="row">
+      <button type="button" id="snap">Capture</button>
+      <button type="button" id="clear" class="secondary">Retake all</button>
+      <button type="button" id="submit" disabled>Submit</button>
+    </div>
+    <div class="msg" id="capMsg"></div>
+  </section>
+
+  <section id="done" class="card hidden">
+    <h2 id="doneTitle"></h2>
+    <p id="doneText"></p>
+    <div class="row"><button type="button" id="startEnroll" class="hidden">Set up face recognition</button><button type="button" id="logout" class="secondary">Log out</button></div>
+  </section>
+</main>
+
+<dialog id="consent">
+  <h2>Face data</h2>
+  <p>We'll capture a few images of your face to train your data in the database. Your data is securely stored in the server.</p>
+  <p>Do you agree to proceed?</p>
+  <div class="row">
+    <button type="button" id="agree">I agree</button>
+    <button type="button" id="decline" class="secondary">Not now</button>
+  </div>
+</dialog>
+
+<canvas id="canvas" class="hidden"></canvas>
+
+<script>
+const API = "{{ api }}";
+const $ = (id) => document.getElementById(id);
+const SECTIONS = ["login", "signup", "forgot", "reset", "capture", "done"];
+let token = null, me = null, info = { min_images: 3, max_images: 5 }, shots = [], stream = null;
+const resetToken = new URLSearchParams(location.search).get("token");
+
+function show(name) {
+  SECTIONS.forEach((s) => $(s).classList.toggle("hidden", s !== name));
+  if (name !== "capture") stopCamera();
+}
+function say(id, text, kind) { const e = $(id); e.textContent = text || ""; e.className = "msg " + (kind || ""); }
+document.querySelectorAll("[data-go]").forEach((a) => a.addEventListener("click", () => show(a.dataset.go)));
+
+async function api(path, { method = "GET", body, auth } = {}) {
+  const headers = {};
+  if (body) headers["Content-Type"] = "application/json";
+  if (auth) headers["Authorization"] = "Bearer " + token;
+  let res;
+  try { res = await fetch(API + path, { method, headers, body: body ? JSON.stringify(body) : undefined }); }
+  catch { throw new Error("Cannot reach the server."); }
+  const data = res.status === 204 ? null : await res.json().catch(() => null);
+  if (!res.ok) {
+    const d = data && data.detail;
+    const text = Array.isArray(d) ? d.map((x) => (x.loc || []).slice(1).join(".") + ": " + x.msg).join("; ") : d;
+    throw new Error(text || "Request failed (" + res.status + ")");
+  }
+  return data;
+}
+
+async function loadDepartments() {
+  try {
+    const list = await api("/departments");
+    const sel = $("s-dept");
+    list.forEach((d) => sel.add(new Option(d.name, d.id)));
+  } catch (e) { say("signupMsg", "Could not load departments.", "err"); }
+}
+
+async function afterAuth() {
+  me = await api("/users/me", { auth: true });
+  try { info = await api("/face/enrollment", { auth: true }); } catch {}
+  if (me.face_enrolled) return finish();
+  $("consent").showModal();
+}
+
+function finish(justEnrolled) {
+  show("done");
+  $("doneTitle").textContent = "Hello, " + (me.full_name || me.username || me.email);
+  $("doneText").textContent = justEnrolled ? "Your face data was saved." :
+    me.face_enrolled ? "Face recognition is set up." : "Face recognition is not set up yet.";
+  $("startEnroll").classList.toggle("hidden", me.face_enrolled);
+}
+
+$("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault(); say("loginMsg", "");
+  try {
+    const t = await api("/auth/login", { method: "POST", body: { username: $("l-user").value, password: $("l-pass").value } });
+    token = t.access_token; $("l-pass").value = "";
+    await afterAuth();
+  } catch (err) { say("loginMsg", err.message, "err"); }
+});
+
+$("signupForm").addEventListener("submit", async (e) => {
+  e.preventDefault(); say("signupMsg", "");
+  try {
+    const r = await api("/auth/signup", { method: "POST", body: {
+      username: $("s-user").value, employee_id: $("s-emp").value, department_id: Number($("s-dept").value),
+      email: $("s-email").value, password: $("s-pass").value } });
+    token = r.access_token; $("s-pass").value = "";
+    await afterAuth();
+  } catch (err) { say("signupMsg", err.message, "err"); }
+});
+
+$("forgotForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  try {
+    const r = await api("/auth/forgot-password", { method: "POST", body: { username: $("f-user").value } });
+    say("forgotMsg", r.detail, "ok");
+  } catch (err) { say("forgotMsg", err.message, "err"); }
+});
+
+$("resetForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  try {
+    await api("/auth/reset-password", { method: "POST", body: { token: resetToken, new_password: $("r-pass").value } });
+    history.replaceState(null, "", "/");
+    show("login"); say("loginMsg", "Password changed. Please log in.", "ok");
+  } catch (err) { say("resetMsg", err.message, "err"); }
+});
+
+$("decline").addEventListener("click", () => { $("consent").close(); finish(); });
+$("agree").addEventListener("click", () => { $("consent").close(); startCapture(); });
+$("startEnroll").addEventListener("click", () => $("consent").showModal());
+$("logout").addEventListener("click", () => { token = null; me = null; show("login"); });
+
+async function startCapture() {
+  shots = []; renderShots(); say("capMsg", "");
+  show("capture");
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 }, audio: false });
+    $("video").srcObject = stream;
+  } catch { say("capMsg", "Camera access was denied or no camera was found.", "err"); }
+}
+function stopCamera() {
+  if (stream) stream.getTracks().forEach((t) => t.stop());
+  stream = null; $("video").srcObject = null;
+}
+function renderShots() {
+  $("shots").replaceChildren(...shots.map((s) => Object.assign(new Image(), { src: s })));
+  $("capCount").textContent = shots.length + " captured (need " + info.min_images + "-" + info.max_images + "). Face the camera in good light; vary your angle slightly.";
+  $("snap").disabled = shots.length >= info.max_images;
+  $("submit").disabled = shots.length < info.min_images;
+}
+$("snap").addEventListener("click", () => {
+  const v = $("video");
+  if (!v.videoWidth) return say("capMsg", "Camera is not ready.", "err");
+  const c = $("canvas"); c.width = v.videoWidth; c.height = v.videoHeight;
+  c.getContext("2d").drawImage(v, 0, 0);
+  shots.push(c.toDataURL("image/jpeg", 0.9)); renderShots();
+});
+$("clear").addEventListener("click", () => { shots = []; renderShots(); say("capMsg", ""); });
+$("submit").addEventListener("click", async () => {
+  $("submit").disabled = true; say("capMsg", "Uploading and verifying...");
+  try {
+    await api("/face/enroll", { method: "POST", auth: true, body: { images: shots } });
+    me.face_enrolled = true; finish(true);
+  } catch (err) { say("capMsg", err.message, "err"); renderShots(); }
+});
+
+loadDepartments();
+if (resetToken) show("reset");
+</script>
+</body>
+</html>

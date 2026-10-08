@@ -37,6 +37,11 @@ class Settings(BaseSettings):
     app_timezone: str = "Asia/Kolkata"
 
     # Auth
+    signup_enabled: bool = True  # public self-registration of staff accounts
+    # Mount the inference service (WS streaming, admin tools) under <api_prefix>/inference. Loads the ML models.
+    inference_mount_enabled: bool = True
+    face_enroll_min_images: int = Field(3, ge=1)
+    face_enroll_max_images: int = Field(10, ge=1)
     jwt_secret_key: SecretStr
     jwt_algorithm: Literal["HS256", "HS384", "HS512"] = "HS256"
     access_token_expire_minutes: int = Field(30, ge=1)
