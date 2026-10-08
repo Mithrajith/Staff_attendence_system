@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin - Staff Attendance</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Arial, sans-serif; background: #fff; color: #111; }
+  main { max-width: 1100px; margin: 0 auto; padding: 0 20px 64px; }
+  header { display: flex; justify-content: space-between; align-items: baseline; padding: 24px 0 12px; }
+  header .title { font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #666; }
+  header .who { font-size: 13px; color: #666; }
+  nav { display: flex; gap: 24px; border-bottom: 1px solid #ddd; margin-bottom: 28px; }
+  nav a { padding: 8px 0; color: #666; text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  nav a.on { color: #111; border-bottom-color: #111; }
+  h2 { font-size: 18px; font-weight: 600; margin: 32px 0 12px; }
+  .bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 16px; }
+  .bar .grow { flex: 1; }
+  .bar label { margin: 0; }
+  label { display: block; font-size: 12px; color: #666; }
+  input, select { display: block; width: 100%; min-width: 120px; padding: 6px 0; font: inherit; border: 0; border-bottom: 1px solid #ccc; border-radius: 0; background: transparent; color: inherit; outline: 0; }
+  input:focus, select:focus { border-bottom-color: #111; }
+  button { padding: 7px 16px; font: inherit; border: 1px solid #111; border-radius: 0; background: #111; color: #fff; cursor: pointer; }
+  button.secondary { background: #fff; color: #111; border-color: #ccc; }
+  button.link { padding: 0; border: 0; background: none; color: #111; text-decoration: underline; margin-right: 12px; }
+  button.link.danger { color: #b42318; }
+  button:disabled { opacity: .4; cursor: default; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 24px; }
+  .stats .num { font-size: 30px; font-weight: 600; line-height: 1.1; }
+  .stats .lbl { font-size: 12px; color: #666; }
+  .scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #666; padding: 8px 12px 8px 0; border-bottom: 1px solid #111; white-space: nowrap; }
+  td { padding: 8px 12px 8px 0; border-bottom: 1px solid #eee; vertical-align: top; }
+  td.nowrap, .nowrap { white-space: nowrap; }
+  .muted { color: #666; }
+  .pager { display: flex; gap: 8px; align-items: center; margin-top: 16px; color: #666; font-size: 13px; }
+  .note { min-height: 1.4em; margin-bottom: 8px; font-size: 13px; color: #1a7f37; }
+  .note.err, .msg.err { color: #b42318; }
+  .msg { min-height: 1.2em; margin-top: 12px; font-size: 13px; }
+  .row { display: flex; gap: 8px; margin-top: 24px; flex-wrap: wrap; }
+  dialog { width: 360px; max-width: 92vw; border: 1px solid #ccc; border-radius: 0; padding: 24px; color: #111; }
+  dialog::backdrop { background: rgba(255, 255, 255, .85); }
+  dialog h2 { margin: 0 0 12px; font-size: 18px; }
+  dialog label { margin-top: 16px; }
+  dialog p { margin: 0; color: #444; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <span class="title">Staff Attendance / Admin</span>
+    <span class="who"><span id="who"></span> <button type="button" id="logout" class="link">Log out</button></span>
+  </header>
+  <nav id="nav">
+    <a href="#overview" data-tab="overview">Overview</a>
+    <a href="#users" data-tab="users">Users</a>
+    <a href="#departments" data-tab="departments">Departments</a>
+    <a href="#attendance" data-tab="attendance">Attendance</a>
+  </nav>
+  <div class="note" id="note"></div>
+  <div id="view"></div>
+</main>
+
+<dialog id="dlg"><form id="dlgForm"></form></dialog>
+
+<script>
+const API = "{{ api }}";
+const $ = (id) => document.getElementById(id);
+const token = sessionStorage.getItem("token");
+let me = null, departments = [];
+
+function logout() { sessionStorage.removeItem("token"); location.replace("/"); }
+$("logout").addEventListener("click", logout);
+if (!token) logout();
+
+// Builds DOM with text nodes only, so server data is never interpreted as markup.
+function h(tag, props, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props || {})) {
+    if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if (v !== false && v != null) e.setAttribute(k, v === true ? "" : v);
+  }
+  e.append(...kids.flat().filter((x) => x != null && x !== false));
+  return e;
+}
+
+async function api(path, { method = "GET", body } = {}) {
+  const headers = { Authorization: "Bearer " + token };
+  if (body) headers["Content-Type"] = "application/json";
+  let res;
+  try { res = await fetch(API + path, { method, headers, body: body ? JSON.stringify(body) : undefined }); }
+  catch { throw new Error("Cannot reach the server."); }
+  if (res.status === 401) { logout(); throw new Error("Session expired."); }
+  const data = res.status === 204 ? null : await res.json().catch(() => null);
+  if (!res.ok) {
+    const d = data && data.detail;
+    throw new Error((Array.isArray(d) ? d.map((x) => (x.loc || []).slice(1).join(".") + ": " + x.msg).join("; ") : d) || "Request failed (" + res.status + ")");
+  }
+  return data;
+}
+
+const qs = (o) => new URLSearchParams(Object.entries(o).filter(([, v]) => v !== "" && v != null)).toString();
+const fmt = (s) => !s ? "-" : new Date(/(Z|[+-]\d\d:?\d\d)$/.test(s) ? s : s + "Z").toLocaleString();
+const ago = (n) => new Date(Date.now() - n * 864e5).toLocaleDateString("en-CA");
+function notify(text, err) { const n = $("note"); n.textContent = text || ""; n.className = "note" + (err ? " err" : ""); }
+
+function table(head, rows) {
+  if (!rows.length) return h("p", { class: "muted" }, "Nothing to show.");
+  return h("div", { class: "scroll" }, h("table", {},
+    h("thead", {}, h("tr", {}, head.map((t) => h("th", {}, t)))),
+    h("tbody", {}, rows.map((r) => h("tr", {}, r.map((c) => h("td", { class: typeof c === "string" && c.length < 30 ? "nowrap" : "" }, c)))))));
+}
+
+function pager(state, total, limit, reload) {
+  const from = total ? state.offset + 1 : 0, to = Math.min(state.offset + limit, total);
+  return h("div", { class: "pager" },
+    h("button", { type: "button", class: "secondary", disabled: state.offset === 0, onclick: () => { state.offset -= limit; reload(); } }, "Previous"),
+    h("button", { type: "button", class: "secondary", disabled: to >= total, onclick: () => { state.offset += limit; reload(); } }, "Next"),
+    h("span", {}, from + "-" + to + " of " + total));
+}
+
+// Modal form. `action(values)` may throw; the message is shown in the dialog.
+function ask(title, fields, label, action, text) {
+  const dlg = $("dlg"), form = $("dlgForm");
+  form.replaceChildren(...[
+    h("h2", {}, title), text ? h("p", {}, text) : null,
+    ...fields.map((f) => h("label", {}, f.label,
+      f.options
+        ? h("select", { name: f.name }, f.options.map(([v, t]) => h("option", { value: v, selected: String(v) === String(f.value) }, t)))
+        : h("input", { name: f.name, type: f.type || "text", value: f.value ?? "", required: !!f.required, minlength: f.minlength, autocomplete: "off" }))),
+    h("div", { class: "row" },
+      h("button", { type: "submit" }, label),
+      h("button", { type: "button", class: "secondary", onclick: () => dlg.close() }, "Cancel")),
+    h("div", { class: "msg err", id: "dlgErr" }),
+  ].filter(Boolean));
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    try { await action(Object.fromEntries(new FormData(form))); dlg.close(); }
+    catch (err) { $("dlgErr").textContent = err.message; }
+  };
+  dlg.showModal();
+}
+
+async function loadDepartments() { departments = await api("/departments"); }
+const deptOptions = (blank) => [["", blank], ...departments.map((d) => [d.id, d.code + " - " + d.name])];
+
+// ---- Overview ----
+async function overview() {
+  const [s, ev] = await Promise.all([api("/admin/summary"), api("/attendance/events?" + qs({ limit: 15, date_from: ago(30) }))]);
+  const stat = ([label, v]) => h("div", {}, h("div", { class: "num" }, String(v)), h("div", { class: "lbl" }, label));
+  return [
+    h("div", { class: "stats" }, [
+      ["Users", s.users_total], ["Active", s.users_active], ["Face enrolled", s.users_face_enrolled],
+      ["Departments", s.departments], ["Checked in today", s.checked_in_today], ["In now", s.currently_in],
+    ].map(stat)),
+    h("h2", {}, "Recent activity"),
+    table(["Time", "Name", "Employee ID", "Event"],
+      ev.items.map((e) => [fmt(e.occurred_at), e.full_name || "User " + e.user_id, e.employee_id || "-", e.event_type === "check_in" ? "Check in" : "Check out"])),
+    h("div", { class: "row" }, h("button", { type: "button", class: "secondary", onclick: () => render() }, "Refresh")),
+  ];
+}
+
+// ---- Users ----
+const U = { q: "", role: "", is_active: "", offset: 0 };
+async function users() {
+  const limit = 20;
+  const [list] = await Promise.all([api("/users?" + qs({ ...U, limit })), departments.length ? null : loadDepartments()]);
+  const sel = (name, opts, val) => h("select", { name }, opts.map(([v, t]) => h("option", { value: v, selected: v === val }, t)));
+  const filters = h("form", { class: "bar", onsubmit: (e) => {
+    e.preventDefault(); const f = new FormData(e.target);
+    Object.assign(U, { q: f.get("q").trim(), role: f.get("role"), is_active: f.get("is_active"), offset: 0 }); render();
+  } },
+    h("label", { class: "grow" }, "Search name, email, username, employee ID", h("input", { name: "q", value: U.q })),
+    h("label", {}, "Role", sel("role", [["", "All"], ["admin", "admin"], ["system", "system"], ["staff", "staff"]], U.role)),
+    h("label", {}, "Status", sel("is_active", [["", "All"], ["true", "Active"], ["false", "Inactive"]], U.is_active)),
+    h("button", { type: "submit" }, "Search"),
+    h("button", { type: "button", class: "secondary", onclick: addUser }, "Add user"));
+  const rows = list.items.map((u) => {
+    const self = u.id === me.id;
+    return [String(u.id), u.full_name, u.username || "-", u.email, u.employee_id || "-",
+      u.department ? u.department.name : "-", u.role, u.is_active ? "Active" : "Inactive", u.face_enrolled ? "Yes" : "No", fmt(u.last_login_at),
+      h("span", { class: "nowrap" },
+        h("button", { type: "button", class: "link", disabled: self, onclick: () => setActive(u) }, u.is_active ? "Deactivate" : "Activate"),
+        h("button", { type: "button", class: "link", onclick: () => setPassword(u) }, "Password"),
+        h("button", { type: "button", class: "link danger", disabled: self, onclick: () => removeUser(u) }, "Delete"))];
+  });
+  return [filters, table(["ID", "Name", "Username", "Email", "Employee ID", "Department", "Role", "Status", "Face", "Last login", ""], rows),
+    pager(U, list.total, limit, render)];
+}
+async function setActive(u) {
+  try { await api(`/users/${u.id}/${u.is_active ? "deactivate" : "activate"}`, { method: "POST" }); notify(u.full_name + (u.is_active ? " deactivated." : " activated.")); }
+  catch (e) { notify(e.message, true); }
+  render(true);
+}
+function removeUser(u) {
+  ask("Delete user", [], "Delete", async () => { await api("/users/" + u.id, { method: "DELETE" }); notify(u.full_name + " deleted."); render(true); },
+    "Permanently delete " + u.full_name + " and their attendance history? This cannot be undone.");
+}
+function setPassword(u) {
+  ask("Set password", [{ name: "new_password", label: "New password (min 10 characters)", type: "password", required: true, minlength: 10 }], "Change",
+    async (v) => { await api(`/users/${u.id}/password`, { method: "PUT", body: { new_password: v.new_password } }); notify("Password changed for " + u.full_name + "; their sessions were signed out."); },
+    u.full_name);
+}
+function addUser() {
+  ask("Add user", [
+    { name: "email", label: "Email", type: "email", required: true },
+    { name: "full_name", label: "Full name", required: true },
+    { name: "role", label: "Role", options: [["staff", "staff"], ["admin", "admin"], ["system", "system"]], value: "staff" },
+    { name: "username", label: "User name (optional)" },
+    { name: "employee_id", label: "Employee ID (optional)" },
+    { name: "department_id", label: "Department", options: deptOptions("None") },
+    { name: "password", label: "Password (blank: email a temporary one)", type: "password", minlength: 10 },
+  ], "Create", async (v) => {
+    const body = Object.fromEntries(Object.entries(v).filter(([, x]) => x !== ""));
+    if (body.department_id) body.department_id = Number(body.department_id);
+    await api("/users", { method: "POST", body });
+    notify("User created."); render(true);
+  });
+}
+
+// ---- Departments ----
+async function departmentsView() {
+  await loadDepartments();
+  return [
+    h("div", { class: "bar" }, h("span", { class: "grow" }), h("button", { type: "button", onclick: () => editDepartment() }, "Add department")),
+    table(["ID", "Code", "Name", ""], departments.map((d) => [String(d.id), d.code, d.name,
+      h("span", { class: "nowrap" },
+        h("button", { type: "button", class: "link", onclick: () => editDepartment(d) }, "Edit"),
+        h("button", { type: "button", class: "link danger", onclick: () => removeDepartment(d) }, "Delete"))])),
+  ];
+}
+function editDepartment(d) {
+  ask(d ? "Edit department" : "Add department", [
+    { name: "code", label: "Code", value: d && d.code, required: true },
+    { name: "name", label: "Name", value: d && d.name, required: true },
+  ], "Save", async (v) => {
+    await api(d ? "/departments/" + d.id : "/departments", { method: d ? "PUT" : "POST", body: { code: v.code.trim(), name: v.name.trim() } });
+    notify("Department saved."); render(true);
+  });
+}
+function removeDepartment(d) {
+  ask("Delete department", [], "Delete", async () => { await api("/departments/" + d.id, { method: "DELETE" }); notify("Department deleted."); render(true); },
+    "Delete " + d.name + "? This is blocked while users are assigned to it.");
+}
+
+// ---- Attendance ----
+const A = { mode: "daily", date_from: "", date_to: "", user_id: "", offset: 0 };
+async function attendance() {
+  const limit = 50, events = A.mode === "events";
+  const data = await api((events ? "/attendance/events?" : "/attendance/records?") + qs({ date_from: A.date_from, date_to: A.date_to, user_id: A.user_id, limit, offset: A.offset }));
+  const filters = h("form", { class: "bar", onsubmit: (e) => {
+    e.preventDefault(); const f = new FormData(e.target);
+    Object.assign(A, { mode: f.get("mode"), date_from: f.get("date_from"), date_to: f.get("date_to"), user_id: f.get("user_id").trim(), offset: 0 }); render();
+  } },
+    h("label", {}, "View", h("select", { name: "mode" }, [["daily", "Daily summary"], ["events", "All events"]].map(([v, t]) => h("option", { value: v, selected: v === A.mode }, t)))),
+    h("label", {}, "From", h("input", { name: "date_from", type: "date", value: A.date_from })),
+    h("label", {}, "To", h("input", { name: "date_to", type: "date", value: A.date_to })),
+    h("label", {}, "User ID", h("input", { name: "user_id", type: "number", min: 1, value: A.user_id })),
+    h("button", { type: "submit" }, "Apply"));
+  const rows = events
+    ? data.items.map((e) => [fmt(e.occurred_at), String(e.user_id), e.full_name || "-", e.employee_id || "-", e.event_type === "check_in" ? "Check in" : "Check out", e.face_confidence == null ? "-" : e.face_confidence.toFixed(2)])
+    : data.items.map((r) => [r.work_date, String(r.user_id), r.full_name, r.employee_id || "-", fmt(r.first_check_in), fmt(r.last_check_out), r.check_in_count + " / " + r.check_out_count]);
+  const head = events ? ["Time", "User ID", "Name", "Employee ID", "Event", "Face match"] : ["Date", "User ID", "Name", "Employee ID", "First check in", "Last check out", "In / out"];
+  return [filters, h("p", { class: "muted" }, "Default range: this month. Times are shown in your local time zone."), table(head, rows), pager(A, data.total, limit, render)];
+}
+
+// ---- Shell ----
+const TABS = { overview, users, departments: departmentsView, attendance };
+let timer = null, seq = 0;
+async function render(keepNote) {
+  const tab = TABS[location.hash.slice(1)] ? location.hash.slice(1) : "overview";
+  document.querySelectorAll("#nav a").forEach((a) => a.classList.toggle("on", a.dataset.tab === tab));
+  if (keepNote !== true) notify("");
+  const mine = ++seq;
+  try {
+    const nodes = await TABS[tab]();
+    if (mine === seq) $("view").replaceChildren(...nodes);
+  } catch (e) { if (mine === seq) $("view").replaceChildren(h("p", { class: "msg err" }, e.message)); }
+  clearInterval(timer);
+  if (tab === "overview") timer = setInterval(() => { if (!document.hidden && !$("dlg").open) render(true); }, 30000);
+}
+window.addEventListener("hashchange", () => render());
+
+(async () => {
+  try { me = await api("/users/me"); } catch { return; }
+  if (me.role !== "admin") return logout();
+  $("who").textContent = me.full_name;
+  render();
+})();
+</script>
+</body>
+</html>

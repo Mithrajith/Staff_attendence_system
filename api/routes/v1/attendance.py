@@ -11,6 +11,7 @@ from api.routes.models.attendance import (
     AttendanceDayAdmin,
     AttendanceDayAdminList,
     AttendanceDayList,
+    AttendanceEventAdmin,
     AttendanceEventList,
     AttendanceEventOut,
     AttendanceStatus,
@@ -95,6 +96,7 @@ def all_records(
             check_out_count=r.check_out_count,
             full_name=users[r.user_id].full_name,
             email=users[r.user_id].email,
+            employee_id=users[r.user_id].employee_id,
         )
         for r in rows
     ]
@@ -111,4 +113,12 @@ def all_events(
     items, total = svc.list_events(
         db, date_from=rng.start, date_to=rng.end, user_id=user_id, limit=limit, offset=offset
     )
-    return AttendanceEventList(items=items, total=total, limit=limit, offset=offset)
+    users = {u.id: u for u in db.scalars(select(User).where(User.id.in_({e.user_id for e in items})))}
+    out = []
+    for e in items:
+        row = AttendanceEventAdmin.model_validate(e)
+        u = users.get(e.user_id)
+        if u:
+            row.full_name, row.employee_id = u.full_name, u.employee_id
+        out.append(row)
+    return AttendanceEventList(items=out, total=total, limit=limit, offset=offset)

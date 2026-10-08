@@ -26,6 +26,7 @@ class Permission(str, Enum):
     departments_manage = "departments:manage"
     attendance_mark_self = "attendance:mark_self"  # check in / out as yourself
     attendance_read_any = "attendance:read_any"  # all users' records and raw events
+    admin_summary = "admin:summary"  # dashboard counters
 
 
 ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {

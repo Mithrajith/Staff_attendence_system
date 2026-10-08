@@ -68,7 +68,14 @@ def list_users(
     if is_active is not None:
         stmt = stmt.where(User.is_active == is_active)
     if q:
-        stmt = stmt.where(or_(User.email.contains(q, autoescape=True), User.full_name.contains(q, autoescape=True)))
+        stmt = stmt.where(
+            or_(
+                User.email.contains(q, autoescape=True),
+                User.full_name.contains(q, autoescape=True),
+                User.username.contains(q, autoescape=True),
+                User.employee_id.contains(q, autoescape=True),
+            )
+        )
     total = db.scalar(select(func.count()).select_from(stmt.subquery()))
     items = db.scalars(stmt.order_by(User.id).limit(limit).offset(offset)).all()
     return UserList(items=items, total=total, limit=limit, offset=offset)

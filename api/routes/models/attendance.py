@@ -49,6 +49,7 @@ class AttendanceDay(BaseModel):
 class AttendanceDayAdmin(AttendanceDay):
     full_name: str
     email: EmailStr
+    employee_id: str | None = None
     check_in_count: int
     check_out_count: int
 
@@ -64,8 +65,13 @@ class AttendanceDayAdminList(BaseModel):
     offset: int
 
 
+class AttendanceEventAdmin(AttendanceEventOut):
+    full_name: str | None = None
+    employee_id: str | None = None
+
+
 class AttendanceEventList(BaseModel):
-    items: list[AttendanceEventOut]
+    items: list[AttendanceEventAdmin]
     total: int
     limit: int
     offset: int

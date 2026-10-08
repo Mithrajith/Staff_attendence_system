@@ -188,6 +188,8 @@ Endpoints under `/api/v1` (Swagger at `/docs` when `APP_ENV=development`):
 
 Seed departments (idempotent, matched by code): `uv run python -m api.cli seed-departments 247=AIML "002=CSE(CY)"`
 
+**Admin console:** logging in as an admin on `/` redirects to `/admin` (Overview with counters and recent check-ins/outs, Users, Departments, Attendance daily summaries and raw events). It is only a shell; every call is authorized by the API (`GET /api/v1/admin/summary` is admin-only). The token lives in `sessionStorage`, so closing the tab logs out.
+
 ### Attendance
 
 Check-in / check-out events are stored append-only (`attendance_events`); the user-facing view is the day's **first check-in** and **last check-out**, admins see every event.

@@ -163,6 +163,11 @@ async function loadDepartments() {
 
 async function afterAuth() {
   me = await api("/users/me", { auth: true });
+  if (me.role === "admin") {
+    sessionStorage.setItem("token", token);
+    location.href = "/admin";
+    return;
+  }
   try { info = await api("/face/enrollment", { auth: true }); } catch {}
   if (me.face_enrolled) return finish();
   $("consent").showModal();

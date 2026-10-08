@@ -26,3 +26,10 @@ def auth_page(request: Request):
     return _templates.TemplateResponse(
         request, "login.html", {"api": get_settings().api_prefix}, headers=_HEADERS
     )
+
+
+@router.get("/admin")  # the page is only a shell; every data call is authorized by the API
+def admin_page(request: Request):
+    return _templates.TemplateResponse(
+        request, "admin.html", {"api": get_settings().api_prefix}, headers=_HEADERS
+    )
