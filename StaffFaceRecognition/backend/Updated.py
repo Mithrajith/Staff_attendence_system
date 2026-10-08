@@ -746,45 +746,71 @@ def store_embeddings(db_path, output_file):
         return {"error": "Dataset path does not exist"}
 
     existing_embeddings = {}
-    if (os.path.exists(output_file)):
-        with open(output_file, 'r') as f:
-            existing_embeddings = json.load(f)
+    if os.path.exists(output_file):
+        try:
+            with open(output_file, 'r') as f:
+                existing_embeddings = json.load(f)
+        except Exception:
+            existing_embeddings = {}
 
     embeddings = defaultdict(list, existing_embeddings)
 
     device = get_safe_torch_device()
-    # Use higher quality settings for
     mtcnn = MTCNN(image_size=160, margin=20, min_face_size=50, thresholds=[0.6, 0.7, 0.9], 
                   factor=0.709, post_process=True, keep_all=False, device=device)
     resnet = InceptionResnetV1(pretrained='vggface2').eval().to(device)
 
     for identity in os.listdir(db_path):
-        # Skip the profile_pics directory
-        if identity == 'profile_pics':
+        # Skip the profile_pics and non-identity directories
+        if identity in ['profile_pics', '__pycache__'] or identity.startswith('.'):
             continue
             
         identity_path = os.path.join(db_path, identity)
         if os.path.isdir(identity_path):
-            for image_name in os.listdir(identity_path):
-                image_path = os.path.join(identity_path, image_name)
+            # Gather all image files inside identity_path (including images/ subfolder)
+            image_files = []
+            for root, dirs, files in os.walk(identity_path):
+                for f in sorted(files):
+                    if f.lower().endswith(('.jpg', '.jpeg', '.png')):
+                        image_files.append(os.path.join(root, f))
+
+            # Deduplicate by filename and limit to at most 10 images per identity
+            processed_images = []
+            seen_basenames = set()
+            for img_p in image_files:
+                base = os.path.basename(img_p)
+                if base not in seen_basenames:
+                    seen_basenames.add(base)
+                    processed_images.append(img_p)
+                if len(processed_images) >= 10:
+                    break
+
+            new_identity_embeddings = []
+            for image_path in processed_images:
                 try:
                     img = Image.open(image_path).convert('RGB')
-                    # Apply image enhancement
                     img = ImageEnhance.Contrast(img).enhance(1.2)
                     img = ImageEnhance.Brightness(img).enhance(1.1)
                     
                     img_cropped = mtcnn(img)
                     if img_cropped is not None:
                         img_embedding = resnet(img_cropped.unsqueeze(0).to(device)).detach().cpu().numpy().tolist()
-                        embeddings[identity].append(img_embedding)
+                        new_identity_embeddings.append(img_embedding)
                 except Exception as e:
-                    print(f"Error processing {image_path}: {str(e)}")
+                    logger.warning(f"Error processing {image_path}: {str(e)}")
                     continue
+
+            if new_identity_embeddings:
+                embeddings[identity] = new_identity_embeddings
 
     with open(output_file, "w") as f:
         json.dump(dict(embeddings), f, indent=4)
 
-    return {"message": "Embeddings stored successfully", "output_file": output_file}
+    # Hot reload embeddings in memory
+    face_detector.embeddings = dict(embeddings)
+    logger.info(f"Embeddings stored successfully for {len(embeddings)} identities.")
+
+    return {"message": "Embeddings stored successfully", "output_file": output_file, "identities_count": len(embeddings)}
 
 @app.post("/store_embeddings/")
 def api_store_embeddings(request: EmbeddingRequest):
@@ -811,13 +837,86 @@ def decode_base64_image(img_b64: str):
         logger.warning(f"Error decoding base64 image: {e}")
         return None
 
+def crop_detected_face(frame):
+    """
+    Detect and crop the face region from a camera frame with a natural margin.
+    If no face bounding box is found, falls back to center crop or original frame.
+    """
+    if frame is None or frame.size == 0:
+        return frame
+
+    h, w = frame.shape[:2]
+    pil_img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+
+    # 1. MTCNN bounding box detection
+    try:
+        boxes, probs = face_detector.mtcnn.detect(pil_img)
+        if boxes is not None and len(boxes) > 0:
+            best_idx = 0
+            if probs is not None and len(probs) > 1:
+                best_idx = int(np.argmax(probs))
+            box = boxes[best_idx]
+            x1, y1, x2, y2 = box
+
+            box_w = x2 - x1
+            box_h = y2 - y1
+            # Add 20% margin around bounding box to capture head comfortably
+            margin_x = int(box_w * 0.2)
+            margin_y = int(box_h * 0.2)
+
+            x1 = max(0, int(x1) - margin_x)
+            y1 = max(0, int(y1) - margin_y)
+            x2 = min(w, int(x2) + margin_x)
+            y2 = min(h, int(y2) + margin_y)
+
+            if x2 > x1 and y2 > y1:
+                crop = frame[y1:y2, x1:x2]
+                if crop.size > 0:
+                    return crop
+    except Exception as e:
+        logger.debug(f"MTCNN detection error in crop_detected_face: {e}")
+
+    # 2. Fallback: OpenCV Haar Cascade
+    try:
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+        if os.path.exists(cascade_path):
+            cascade = cv2.CascadeClassifier(cascade_path)
+            faces = cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=3, minSize=(60, 60))
+            if len(faces) > 0:
+                x, y, fw, fh = max(faces, key=lambda item: item[2] * item[3])
+                margin_x = int(fw * 0.2)
+                margin_y = int(fh * 0.2)
+                x1 = max(0, x - margin_x)
+                y1 = max(0, y - margin_y)
+                x2 = min(w, x + fw + margin_x)
+                y2 = min(h, y + fh + margin_y)
+                crop = frame[y1:y2, x1:x2]
+                if crop.size > 0:
+                    return crop
+    except Exception as e:
+        logger.debug(f"Haar cascade detection error: {e}")
+
+    # 3. Fallback: Center portrait crop
+    cx1 = int(w * 0.15)
+    cy1 = int(h * 0.1)
+    cx2 = int(w * 0.85)
+    cy2 = int(h * 0.9)
+    if cx2 > cx1 and cy2 > cy1:
+        return frame[cy1:cy2, cx1:cx2]
+
+    return frame
+
 class RegisterStaffFacesRequest(BaseModel):
     emp_id: str
     images: List[str]
 
 @app.post("/register-staff-faces/")
 async def register_staff_faces(request: RegisterStaffFacesRequest):
-    """Register face images for a staff member, extract embeddings, save to media, and update model."""
+    """
+    Extract face region from each captured image and store it in media.
+    Per user request: DO NOT compute or train embeddings during capture.
+    """
     try:
         emp_id = request.emp_id.strip()
         if not emp_id or not request.images:
@@ -834,8 +933,6 @@ async def register_staff_faces(request: RegisterStaffFacesRequest):
         os.makedirs(staff_images_dir, exist_ok=True)
         os.makedirs(profile_pics_dir, exist_ok=True)
 
-        device = face_detector.device
-        new_embeddings = []
         saved_count = 0
         profile_saved = False
 
@@ -843,65 +940,36 @@ async def register_staff_faces(request: RegisterStaffFacesRequest):
             frame = decode_base64_image(img_b64)
             if frame is None:
                 continue
-            
-            # Save to media/<emp_id>/images/image_{i}.jpg as requested
+
+            # Detect and extract the cropped face
+            face_crop = crop_detected_face(frame)
+            if face_crop is None or face_crop.size == 0:
+                face_crop = frame
+
+            # Save the cropped face to media/<emp_id>/images/image_{i}.jpg
             img_path = os.path.join(staff_images_dir, f"image_{idx + 1}.jpg")
-            cv2.imwrite(img_path, frame)
+            cv2.imwrite(img_path, face_crop)
+
             # Also save to media/<emp_id>/img_{i}.jpg for compatibility
-            cv2.imwrite(os.path.join(staff_media_dir, f"img_{idx + 1}.jpg"), frame)
+            cv2.imwrite(os.path.join(staff_media_dir, f"img_{idx + 1}.jpg"), face_crop)
             saved_count += 1
 
-            pil_img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-            face_tensor = face_detector.mtcnn(pil_img)
-            if face_tensor is not None:
-                if not profile_saved:
-                    profile_path = os.path.join(profile_pics_dir, f"{emp_id}.jpg")
-                    cv2.imwrite(profile_path, frame)
-                    profile_saved = True
+            # Save the first cropped face as the official profile picture
+            if not profile_saved:
+                profile_path = os.path.join(profile_pics_dir, f"{emp_id}.jpg")
+                cv2.imwrite(profile_path, face_crop)
+                profile_saved = True
 
-                with torch.no_grad():
-                    emb = face_detector.resnet(face_tensor.unsqueeze(0).to(device)).detach().cpu().numpy().tolist()
-                    new_embeddings.append(emb)
-
-        if not profile_saved and saved_count > 0:
-            first_frame_path = os.path.join(staff_images_dir, "image_1.jpg")
-            if os.path.exists(first_frame_path):
-                shutil.copy(first_frame_path, os.path.join(profile_pics_dir, f"{emp_id}.jpg"))
-
-        if not new_embeddings and saved_count > 0:
-            try:
-                first_img = Image.open(os.path.join(staff_images_dir, "image_1.jpg")).convert('RGB')
-                w, h = first_img.size
-                crop_box = (int(w * 0.15), int(h * 0.1), int(w * 0.85), int(h * 0.9))
-                cropped = first_img.crop(crop_box).resize((160, 160))
-                tensor_crop = torch.tensor(np.array(cropped), dtype=torch.float32).permute(2, 0, 1) / 255.0
-                tensor_crop = (tensor_crop - 0.5) / 0.5
-                with torch.no_grad():
-                    emb = face_detector.resnet(tensor_crop.unsqueeze(0).to(device)).detach().cpu().numpy().tolist()
-                    new_embeddings.append(emb)
-                logger.info(f"Generated fallback center-crop embedding for staff {emp_id}")
-            except Exception as e:
-                logger.warning(f"Fallback embedding generation failed: {e}")
-
-        if not new_embeddings:
+        if saved_count == 0:
             raise HTTPException(
                 status_code=400,
-                detail="Could not detect clear face features in the captured photos. Please ensure good lighting and face camera directly."
+                detail="No valid face images could be processed. Please try capturing again."
             )
 
-        if emp_id not in face_detector.embeddings:
-            face_detector.embeddings[emp_id] = []
-        face_detector.embeddings[emp_id].extend(new_embeddings)
-
-        output_file = face_detector.db_file
-        with open(output_file, "w") as f:
-            json.dump(face_detector.embeddings, f, indent=4)
-
-        logger.info(f"Registered {len(new_embeddings)} embeddings for staff {emp_id} in {staff_images_dir}")
+        logger.info(f"Stored {saved_count} cropped face photos for staff {emp_id} in {staff_images_dir} (embeddings training postponed)")
         return {
             "status": "success",
-            "message": f"Successfully registered face for staff {emp_id}",
-            "embeddings_count": len(new_embeddings),
+            "message": f"Successfully captured and stored {saved_count} face photos for staff {emp_id}",
             "images_saved": saved_count,
             "images_directory": staff_images_dir
         }

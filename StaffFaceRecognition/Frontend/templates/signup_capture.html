@@ -982,7 +982,7 @@
             autoCaptureBtn.disabled = true;
             snapBtn.disabled = true;
             resetBtn.disabled = true;
-            showStatus('Training biometric face embeddings and creating staff account. Please wait...', 'loading');
+            showStatus('Extracting and storing face photos in media. Creating staff account...', 'loading');
 
             try {
                 const response = await fetch("{% url 'signup_complete' %}", {
@@ -996,7 +996,7 @@
                 const data = await response.json();
 
                 if (response.ok && data.status === 'success') {
-                    showStatus('Biometric registration successful! Redirecting to Staff Attendance Portal...', 'info');
+                    showStatus('Face photos stored successfully! Redirecting to Staff Attendance Portal...', 'info');
                     stopCamera();
                     setTimeout(() => {
                         window.location.href = data.redirect_url || "{% url 'my_attendance' %}";

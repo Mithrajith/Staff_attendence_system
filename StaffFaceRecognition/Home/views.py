@@ -563,9 +563,15 @@ def settings_view(request):
         action = request.POST.get('action')
         if action == 'resync_embeddings':
             try:
-                resp = requests.post("http://127.0.0.1:5600/reload-embeddings", timeout=5)
+                # 1. Train and save embeddings for all media faces
+                store_resp = requests.post("http://127.0.0.1:5600/store_embeddings/", json={
+                    "db_path": settings.MEDIA_ROOT,
+                    "output_file": embeddings_file
+                }, timeout=45)
+                # 2. Reload embeddings in recognition service memory
+                resp = requests.post("http://127.0.0.1:5600/reload-embeddings", timeout=10)
                 if resp.status_code == 200:
-                    messages.success(request, "Face embeddings reloaded and synchronized with backend!")
+                    messages.success(request, "Face embeddings trained from stored media photos and synchronized with AI engine!")
                 else:
                     messages.error(request, "Failed to re-sync embeddings with recognition service.")
             except Exception as e:
