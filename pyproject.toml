@@ -22,7 +22,7 @@ dependencies = [
     "Pillow>=10.2,<10.3",
     "numpy>=1.26,<2",
     # API and Async
-    "fastapi>=0.115",
+    "fastapi[standard]>=0.115",
     "uvicorn[standard]",
     "websockets>=13.0",
     "python-multipart>=0.0.9",
@@ -36,7 +36,26 @@ dependencies = [
     "pydantic>=2.9",
     # Utils
     "python-dotenv>=1.0",
+    "sqlalchemy>=2.0",
+    "pymysql>=1.1",
+    "cryptography>=43",
+    "alembic>=1.13",
+    "pydantic-settings>=2.5",
+    "email-validator>=2.2",
+    "pyjwt>=2.9",
+    "argon2-cffi>=23.1",
+    "jinja2>=3.1",
 ]
 
 [tool.uv]
 package = false
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

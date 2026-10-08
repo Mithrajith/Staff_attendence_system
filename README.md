@@ -149,3 +149,31 @@ Key settings can be modified in:
 - Background task handling
 - Efficient embedding storage
 - Camera pipeline optimization
+
+## User management API
+
+FastAPI + MySQL (`api/`, `database/`). Roles: `admin` (everything), `staff` (own data only), `system` (no permissions yet, see `ROLE_PERMISSIONS` in `api/deps.py`).
+
+```bash
+cp .env.example .env            # set real secrets (JWT_SECRET_KEY, MYSQL_*), SMTP_* for production
+docker compose up -d mysql
+uv run alembic upgrade head
+uv run python -m api.cli create-admin --email admin@example.com --name "Admin"
+uv run uvicorn api.main:app --host 0.0.0.0 --port 8000
+uv run pytest tests/test_user_api.py
+```
+
+Endpoints under `/api/v1` (Swagger at `/docs` when `APP_ENV=development`):
+
+| Method | Path | Access |
+|---|---|---|
+| POST | `/auth/login` | public |
+| POST | `/auth/forgot-password`, `/auth/reset-password` | public (emailed single-use token) |
+| POST / GET | `/users` | admin (create / list) |
+| GET | `/users/me` | any user |
+| GET | `/users/{id}` | admin or self |
+| POST | `/users/{id}/activate`, `/users/{id}/deactivate` | admin |
+| DELETE | `/users/{id}` | admin |
+| PUT | `/users/{id}/password` | self (needs `current_password`) or admin |
+
+`APP_ENV=production` refuses to start with weak/placeholder secrets, console email, or wildcard CORS, and disables `/docs`.

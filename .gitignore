@@ -68,6 +68,8 @@ docker-compose.dev.yml
 
 qdrant_data*
 redis_data*
+mysql_data*
 testing/uploads/*
 !testing/uploads/.gitkeep
 
+mysql_data*
