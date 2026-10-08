@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Staff Attendance System",
+    "output": "docs/architecture.html",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    { "id": "users", "type": "external", "label": "Browsers", "sublabel": "Staff, Admin, Kiosk",     "pos": [40, 180], "size": [130, 60] },
+        { "id": "smtp", "type": "external", "label": "SMTP server", "sublabel": "reset emails", "pos": [40, 20], "size": [130, 60] },
+        { "id": "app", "type": "backend", "label": "FastAPI app", "sublabel": "web pages + /api/v1, JWT roles", "pos": [270, 150], "size": [240, 110], "tag": "only published port" },
+        { "id": "inference", "type": "backend", "label": "Face inference", "sublabel": "YOLO detect + ResNet embed", "pos": [680, 180], "size": [170, 60] },
+        { "id": "qdrant", "type": "database", "label": "Qdrant", "sublabel": "face vectors", "pos": [950, 180], "size": [130, 60], "tag": "internal only" },
+        { "id": "redis", "type": "database", "label": "Redis", "sublabel": "face flag, debounce", "pos": [680, 20], "size": [170, 60], "tag": "internal only" },
+        { "id": "mysql", "type": "database", "label": "MySQL", "sublabel": "users, attendance", "pos": [295, 340], "size": [130, 60], "tag": "internal only" },
+        { "id": "hostdisk", "type": "external", "label": "Host disk", "sublabel": "media/ and logs/ mounts", "pos": [680, 340], "size": [170, 60] }
+  ],
+  "connections": [
+    { "id": "users-to-app", "from": "users", "to": "app", "label": "HTTP", "variant": "emphasis" },
+    { "id": "app-to-smtp", "from": "app", "to": "smtp", "label": "reset email", "variant": "dashed" },
+    { "id": "app-to-inference", "from": "app", "to": "inference", "label": "face calls" },
+    { "id": "inference-to-qdrant", "from": "inference", "to": "qdrant", "label": "vectors" },
+    { "id": "inference-to-redis", "from": "inference", "to": "redis", "label": "set flag", "fromSide": "top", "toSide": "bottom" },
+    { "id": "app-to-redis", "from": "app", "to": "redis", "label": "read flag", "variant": "security", "fromSide": "top", "toSide": "left" },
+    { "id": "app-to-mysql", "from": "app", "to": "mysql", "label": "SQL", "fromSide": "bottom", "toSide": "top" },
+    { "id": "inference-to-disk", "from": "inference", "to": "hostdisk", "label": "face images", "variant": "dashed", "fromSide": "bottom", "toSide": "top" },
+    { "id": "app-to-disk", "from": "app", "to": "hostdisk", "label": "logs", "variant": "dashed", "fromSide": "bottom", "toSide": "left" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Exposure", "items": ["Docker Compose publishes only APP_PORT", "MySQL, Redis and Qdrant sit on an internal network with no host ports"] },
+    { "dot": "emerald", "title": "Roles", "items": ["admin: everything", "staff: own data only", "system: kiosk scan only"] },
+    { "dot": "amber", "title": "Attendance", "items": ["Face recognition sets a short-lived flag in Redis", "The app consumes it before saving a check-in or check-out", "The kiosk records only after the person confirms"] },
+    { "dot": "slate", "title": "Persistence", "items": ["MEDIA_HOST_DIR holds enrolled face images", "LOG_HOST_DIR holds app, error, access and audit logs"] }
+  ]
+}

@@ -1,5 +1,17 @@
 # Staff Attendance System
 
+## Architecture
+
+![Staff Attendance System architecture](docs/architecture.png)
+
+Interactive version (zoom, search, trace a path, export): open [docs/architecture.html](docs/architecture.html) in a browser. The editable source is [docs/architecture.diagram.json](docs/architecture.diagram.json).
+
+- **One entry point.** Staff, admin and kiosk browsers talk only to the FastAPI app, which serves the web pages and `/api/v1`. It is the only service Docker Compose publishes (`APP_PORT`).
+- **Face inference runs inside the app.** It is mounted at `/api/v1/inference`. It detects and embeds faces, and stores and searches the vectors in Qdrant.
+- **Attendance gating.** After a face is recognized, the inference service sets a short-lived flag in Redis. The app reads and consumes it before saving a check-in or check-out. The kiosk only records after the person confirms.
+- **Private services.** MySQL (users, departments, attendance events), Redis and Qdrant sit on an internal Docker network with no host ports.
+- **Outside the containers.** Enrolled face images (`MEDIA_HOST_DIR`) and logs (`LOG_HOST_DIR`) live on the host disk. Password-reset emails go out through the configured SMTP server.
+
 ## User management API
 
 FastAPI + MySQL (`api/`, `database/`). Roles: `admin` (everything), `staff` (own data only), `system` (the kiosk machine: only `kiosk_scan`, no attendance of its own; see `ROLE_PERMISSIONS` in `api/deps.py`).
