@@ -1005,28 +1005,47 @@
                 <i class="material-icons-round">chevron_left</i>
             </div>
             <div class="sidebar-menu">
-                <span class="menu-title">Navigation</span>
+                <span class="menu-title">{% if user.is_superuser or user.is_staff %}Admin Menu{% else %}Staff Menu{% endif %}</span>
                 <ul>
+                    {% if user.is_superuser or user.is_staff %}
                     <li>
-                        <a href="{% url 'home' %}" class="{% if request.path == '/' %}active{% endif %}">
-                            <i class="material-icons-round">home</i>
+                        <a href="{% url 'home' %}" class="{% if request.path == '/' or request.path == '/dashboard/' %}active{% endif %}">
+                            <i class="material-icons-round">dashboard</i>
                             <span class="menu-text">Dashboard</span>
                         </a>
                     </li>
                     <li>
-                        <a href="{% url 'report' %}" class="{% if 'report' in request.path %}active{% endif %}">
-                            <i class="material-icons-round">assessment</i>
-                            <span class="menu-text">Reports</span>
+                        <a href="{% url 'manage_employees' %}" class="{% if 'manage_employees' in request.path or 'employee' in request.path %}active{% endif %}">
+                            <i class="material-icons-round">people</i>
+                            <span class="menu-text">Manage Faculty</span>
                         </a>
                     </li>
-                    {% if user.is_superuser %}
                     <li>
-                        <a href="{% url 'manage_employees' %}" class="{% if 'manage_employees' in request.path %}active{% endif %}">
-                            <i class="material-icons-round">groups</i>
-                            <span class="menu-text">Manage Employees</span>
+                        <a href="{% url 'report' %}" class="{% if 'report' in request.path and 'my-attendance' not in request.path %}active{% endif %}">
+                            <i class="material-icons-round">assessment</i>
+                            <span class="menu-text">Attendance Report</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'settings' %}" class="{% if 'settings' in request.path %}active{% endif %}">
+                            <i class="material-icons-round">settings</i>
+                            <span class="menu-text">Settings</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li>
+                        <a href="{% url 'my_attendance' %}" class="{% if 'my-attendance' in request.path %}active{% endif %}">
+                            <i class="material-icons-round">event_note</i>
+                            <span class="menu-text">My Attendance</span>
                         </a>
                     </li>
                     {% endif %}
+                    <li>
+                        <a href="{% url 'kiosk' %}" target="_blank">
+                            <i class="material-icons-round">camera</i>
+                            <span class="menu-text">Kiosk Terminal ↗</span>
+                        </a>
+                    </li>
                     <li>
                         <a href="{% url 'logout' %}">
                             <i class="material-icons-round">logout</i>

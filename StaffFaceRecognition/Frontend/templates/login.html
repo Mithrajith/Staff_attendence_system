@@ -569,9 +569,12 @@
             
             <div class="login-form">
                 <div class="form-header">
-                    <h2 class="form-title">Welcome Back</h2>
-                    <p class="form-subtitle">Login to access your dashboard</p>
+                    <h2 class="form-title">Portal Sign In</h2>
+                    <p class="form-subtitle">Access Staff or Admin Attendance Portals</p>
                 </div>
+
+                <!-- Role 1: System Kiosk Banner -->
+               
                 
                 {% if messages %}
                     {% for message in messages %}
@@ -586,14 +589,14 @@
                     <div class="form-group">
                         <label class="form-label" for="username">Username</label>
                         <div class="input-wrapper">
-                            <input type="text" id="username" name="username" class="form-control" required autocomplete="username" />
+                            <input type="text" id="username" name="username" class="form-control" required autocomplete="username" placeholder="Username" />
                             <span class="material-icons-round input-icon">person</span>
                         </div>
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="password">Password</label>
                         <div class="input-wrapper">
-                            <input type="password" id="password" name="password" class="form-control" required autocomplete="current-password" />
+                            <input type="password" id="password" name="password" class="form-control" required autocomplete="current-password" placeholder="Enter password" />
                             <span class="material-icons-round input-icon">lock</span>
                         </div>
                     </div>
@@ -601,11 +604,17 @@
                         <span>Sign In</span>
                         <span class="material-icons-round button-icon">arrow_forward</span>
                     </button>
+
+                    <div style="margin-top: 1.25rem; text-align: center;">
+                        <span style="color: var(--gray); font-size: var(--font-size-sm);">New Faculty?</span>
+                        <a href="{% url 'signup' %}" style="display: block; margin-top: 0.5rem; padding: 0.75rem 1.25rem; background: var(--surface-2); border: 1.5px solid var(--primary-light); color: var(--primary); border-radius: var(--radius-lg); font-weight: 600; text-align: center; text-decoration: none; transition: var(--transition-base);">
+                            <span class="material-icons-round" style="vertical-align: middle; font-size: 1.15rem; margin-right: 4px;">person_add</span>
+                            Sign Up
+                        </a>
+                    </div>
                 </form>
                 
-                <div class="form-footer">
-                    Contact administrator for account assistance
-                </div>
+
             </div>
         </div>
     </div>

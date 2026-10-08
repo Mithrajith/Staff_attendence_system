@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block page_title %}System & Recognition Settings{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Top Stats Row -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm p-4">
+                <div class="d-flex align-items-center">
+                    <div class="rounded-circle p-3 bg-primary bg-opacity-10 text-primary me-3">
+                        <i class="material-icons-round fs-2">people</i>
+                    </div>
+                    <div>
+                        <div class="text-muted small fw-semibold">REGISTERED FACULTY</div>
+                        <h3 class="mb-0 fw-bold">{{ total_employees }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm p-4">
+                <div class="d-flex align-items-center">
+                    <div class="rounded-circle p-3 bg-success bg-opacity-10 text-success me-3">
+                        <i class="material-icons-round fs-2">assignment_turned_in</i>
+                    </div>
+                    <div>
+                        <div class="text-muted small fw-semibold">TOTAL ATTENDANCE RECORDS</div>
+                        <h3 class="mb-0 fw-bold">{{ total_attendance_records }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm p-4">
+                <div class="d-flex align-items-center">
+                    <div class="rounded-circle p-3 bg-info bg-opacity-10 text-info me-3">
+                        <i class="material-icons-round fs-2">fingerprint</i>
+                    </div>
+                    <div>
+                        <div class="text-muted small fw-semibold">ACTIVE FACE EMBEDDINGS</div>
+                        <h3 class="mb-0 fw-bold">{{ embeddings_count }} Identities</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Forms Row -->
+    <div class="row g-4">
+        <!-- Hardware & Network Settings -->
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm p-4 h-100">
+                <div class="d-flex align-items-center mb-4">
+                    <i class="material-icons-round text-primary me-2">tune</i>
+                    <h5 class="mb-0 fw-bold">Camera & Recognition Configuration</h5>
+                </div>
+
+                <form method="post" action="{% url 'settings' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="save_settings" />
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="camera_index">Backend Hardware Camera Index</label>
+                        <input type="text" id="camera_index" name="camera_index" class="form-control" 
+                               value="{{ camera_index }}" required />
+                        <div class="form-text">
+                            Default is <code>2</code> for external USB camera, or <code>0</code> for internal laptop camera. Note: Direct Browser Camera in the Kiosk terminal bypasses server USB issues.
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold" for="ip">Server IP / Hostname</label>
+                        <input type="text" id="ip" name="ip" class="form-control" 
+                               value="{{ ip }}" required />
+                        <div class="form-text">
+                            Used for FastAPI communication (default <code>127.0.0.1</code> or LAN IP).
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="material-icons-round">save</i>
+                        Save Configuration
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Embeddings Re-Sync & Diagnostics -->
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm p-4 h-100">
+                <div class="d-flex align-items-center mb-4">
+                    <i class="material-icons-round text-warning me-2">sync</i>
+                    <h5 class="mb-0 fw-bold">Synchronize AI Embeddings</h5>
+                </div>
+
+                <p class="text-muted small">
+                    If you added or edited staff photos directly on disk or in the database, trigger a hot reload so the recognition neural network loads the latest face encodings into memory immediately.
+                </p>
+
+                <form method="post" action="{% url 'settings' %}" class="mb-4">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="resync_embeddings" />
+                    <button type="submit" class="btn btn-warning text-dark fw-bold w-100 py-2">
+                        <i class="material-icons-round">refresh</i>
+                        Re-Sync Embeddings Now
+                    </button>
+                </form>
+
+                <hr class="my-3 text-muted" />
+
+                <div class="d-flex align-items-center mb-2">
+                    <i class="material-icons-round text-success me-2">camera</i>
+                    <h6 class="mb-0 fw-bold">Attendance Kiosk Terminal</h6>
+                </div>
+                <p class="text-muted small mb-3">
+                    Open the dedicated fullscreen Check In / Check Out terminal:
+                </p>
+                <a href="{% url 'kiosk' %}" target="_blank" class="btn btn-outline-primary w-100">
+                    <i class="material-icons-round">open_in_new</i>
+                    Open Kiosk Terminal
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

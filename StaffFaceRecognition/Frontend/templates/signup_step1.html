@@ -1,0 +1,291 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Staff Registration - Step 1 | Face Recognition Attendance</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --primary-dark: #4f46e5;
+            --secondary: #0f172a;
+            --secondary-light: #1e293b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --gray: #64748b;
+            --gray-light: #cbd5e1;
+            --white: #ffffff;
+            --surface: #ffffff;
+            --surface-2: #f8fafc;
+            --radius-lg: 0.75rem;
+            --radius-xl: 1rem;
+            --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.1);
+            --shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.1);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            color: var(--secondary);
+        }
+        .signup-container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--surface);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-xl);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+            color: var(--white);
+            padding: 2rem;
+            text-align: center;
+            position: relative;
+        }
+        .header h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem; }
+        .header p { font-size: 0.875rem; opacity: 0.9; }
+        .step-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1.25rem;
+        }
+        .step-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.35rem 0.85rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .step-active { background: var(--white); color: var(--primary); }
+        .step-inactive { background: rgba(255, 255, 255, 0.2); color: var(--white); }
+        
+        .form-body { padding: 2rem; }
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .col-span-2 { grid-column: span 2; }
+        @media (max-width: 580px) {
+            .form-grid { grid-template-columns: 1fr; }
+            .col-span-2 { grid-column: span 1; }
+        }
+        .form-group { margin-bottom: 1rem; }
+        .form-label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.4rem;
+            color: #334155;
+        }
+        .input-wrapper {
+            position: relative;
+        }
+        .input-icon {
+            position: absolute;
+            left: 0.9rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray);
+            font-size: 1.2rem;
+        }
+        .form-control {
+            width: 100%;
+            padding: 0.75rem 0.9rem 0.75rem 2.6rem;
+            border: 1.5px solid var(--gray-light);
+            border-radius: var(--radius-lg);
+            font-size: 0.9rem;
+            font-family: inherit;
+            transition: all 0.2s ease;
+            background: var(--surface-2);
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: var(--white);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+        select.form-control {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 1rem;
+        }
+        .helper-text {
+            font-size: 0.75rem;
+            color: var(--gray);
+            margin-top: 0.25rem;
+        }
+        .alert {
+            padding: 0.85rem 1rem;
+            border-radius: var(--radius-lg);
+            margin-bottom: 1.25rem;
+            font-size: 0.85rem;
+        }
+        .alert-error, .alert-danger { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+        .alert-warning { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+
+        .btn-submit {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.9rem 1.5rem;
+            background: var(--primary);
+            color: var(--white);
+            border: none;
+            border-radius: var(--radius-lg);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow-md);
+            margin-top: 0.5rem;
+        }
+        .btn-submit:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+        .footer-links {
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: 0.85rem;
+            color: var(--gray);
+        }
+        .footer-links a {
+            color: var(--primary);
+            font-weight: 600;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="signup-container">
+        <div class="header">
+            <h1>Staff / Faculty Registration</h1>
+            <p>Step 1 of 2: Personal & Department Details</p>
+            <div class="step-indicator">
+                <span class="step-pill step-active">
+                    <span class="material-icons-round" style="font-size: 1rem;">person</span>
+                    1. Account Details
+                </span>
+                <span class="step-pill step-inactive">
+                    <span class="material-icons-round" style="font-size: 1rem;">face</span>
+                    2. Face ID Capture (10 Photos)
+                </span>
+            </div>
+        </div>
+
+        <div class="form-body">
+            {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post" action="{% url 'signup' %}">
+                {% csrf_token %}
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label" for="staff_id">Staff ID *</label>
+                        <div class="input-wrapper">
+                            <input type="text" id="staff_id" name="staff_id" class="form-control" 
+                                   value="{{ staff_id|default:'' }}" placeholder="e.g. FAC101" required autofocus />
+                            <span class="material-icons-round input-icon">badge</span>
+                        </div>
+                        <div class="helper-text">Unique faculty/employee identifier</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="staff_name">Full Name *</label>
+                        <div class="input-wrapper">
+                            <input type="text" id="staff_name" name="staff_name" class="form-control" 
+                                   value="{{ staff_name|default:'' }}" placeholder="e.g. Dr. John Doe" required />
+                            <span class="material-icons-round input-icon">person</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group col-span-2">
+                        <label class="form-label" for="department">Department *</label>
+                        <div class="input-wrapper">
+                            <select id="department" name="department" class="form-control" required>
+                                <option value="" disabled {% if not department %}selected{% endif %}>Select Faculty Department</option>
+                                <option value="Computer Science" {% if department == 'Computer Science' %}selected{% endif %}>Computer Science & Engineering</option>
+                                <option value="Information Technology" {% if department == 'Information Technology' %}selected{% endif %}>Information Technology</option>
+                                <option value="AI&ML" {% if department == 'AI&ML' %}selected{% endif %}>Artificial Intelligence & ML</option>
+                                <option value="Electronics & Communication" {% if department == 'Electronics & Communication' %}selected{% endif %}>Electronics & Communication</option>
+                                <option value="Mechanical" {% if department == 'Mechanical' %}selected{% endif %}>Mechanical Engineering</option>
+                                <option value="Civil" {% if department == 'Civil' %}selected{% endif %}>Civil Engineering</option>
+                                <option value="Management Studies" {% if department == 'Management Studies' %}selected{% endif %}>Management / Business Studies</option>
+                                <option value="Science & Humanities" {% if department == 'Science & Humanities' %}selected{% endif %}>Science & Humanities</option>
+                                <option value="Administration" {% if department == 'Administration' %}selected{% endif %}>Administration Staff</option>
+                            </select>
+                            <span class="material-icons-round input-icon">business</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group col-span-2">
+                        <label class="form-label" for="email">Institutional Email *</label>
+                        <div class="input-wrapper">
+                            <input type="email" id="email" name="email" class="form-control" 
+                                   value="{{ email|default:'' }}" placeholder="e.g. john.doe@institution.edu" required />
+                            <span class="material-icons-round input-icon">email</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="password">Password (8+ chars) *</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="password" name="password" class="form-control" 
+                                   minlength="8" placeholder="At least 8 characters" required />
+                            <span class="material-icons-round input-icon">lock</span>
+                        </div>
+                        <div class="helper-text">Must be at least 8 digits/characters</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="confirm_password">Confirm Password *</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="confirm_password" name="confirm_password" class="form-control" 
+                                   minlength="8" placeholder="Re-enter password" required />
+                            <span class="material-icons-round input-icon">lock_clock</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-submit">
+                    <span>Continue to Face Capture (Step 2)</span>
+                    <span class="material-icons-round">arrow_forward</span>
+                </button>
+            </form>
+
+            <div class="footer-links">
+                Already registered? <a href="{% url 'login' %}">Sign In here</a> &bull;
+                <a href="{% url 'kiosk' %}">Attendance Kiosk</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

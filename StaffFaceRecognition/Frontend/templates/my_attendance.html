@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block page_title %}My Attendance Report{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Faculty Profile Banner -->
+    <div class="card border-0 shadow-sm p-4 mb-4" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white;">
+        <div class="d-flex align-items-center flex-wrap gap-4">
+            <div style="width: 80px; height: 80px; border-radius: 50%; overflow: hidden; background: #6366f1; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: bold; border: 3px solid rgba(255, 255, 255, 0.2);">
+                {% if profile_pic %}
+                    <img src="{{ profile_pic }}" alt="{{ employee.emp_name }}" style="width: 100%; height: 100%; object-fit: cover;" />
+                {% else %}
+                    {{ employee.emp_name.0|upper }}
+                {% endif %}
+            </div>
+
+            <div class="flex-grow-1">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <h3 class="mb-0 text-white fw-bold">{{ employee.emp_name }}</h3>
+                    <span class="badge bg-success">Active Staff</span>
+                </div>
+                <div class="d-flex flex-wrap gap-3 text-light opacity-75 small">
+                    <div><i class="material-icons-round align-middle fs-6">badge</i> ID: <strong>{{ employee.emp_id }}</strong></div>
+                    <div><i class="material-icons-round align-middle fs-6">business</i> Department: <strong>{{ employee.department }}</strong></div>
+                    {% if employee.email %}
+                    <div><i class="material-icons-round align-middle fs-6">email</i> {{ employee.email }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <a href="{% url 'logout' %}" class="btn btn-outline-light btn-sm px-3">
+                <i class="material-icons-round">logout</i>
+                Logout
+            </a>
+        </div>
+    </div>
+
+    <!-- Attendance Stats Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm p-4">
+                <div class="d-flex align-items-center">
+                    <div class="rounded-circle p-3 bg-primary bg-opacity-10 text-primary me-3">
+                        <i class="material-icons-round fs-2">calendar_today</i>
+                    </div>
+                    <div>
+                        <div class="text-muted small fw-semibold">TOTAL DAYS ATTENDED</div>
+                        <h3 class="mb-0 fw-bold">{{ total_days }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm p-4">
+                <div class="d-flex align-items-center">
+                    <div class="rounded-circle p-3 bg-success bg-opacity-10 text-success me-3">
+                        <i class="material-icons-round fs-2">schedule</i>
+                    </div>
+                    <div>
+                        <div class="text-muted small fw-semibold">TOTAL WORKING HOURS</div>
+                        <h3 class="mb-0 fw-bold">{{ total_working_hours }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm p-4">
+                <div class="d-flex align-items-center">
+                    <div class="rounded-circle p-3 bg-info bg-opacity-10 text-info me-3">
+                        <i class="material-icons-round fs-2">timelapse</i>
+                    </div>
+                    <div>
+                        <div class="text-muted small fw-semibold">DAILY AVERAGE HOURS</div>
+                        <h3 class="mb-0 fw-bold">{{ avg_daily_hours }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter & Table Card -->
+    <div class="card border-0 shadow-sm p-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+            <h5 class="mb-0 fw-bold">Personal Attendance History</h5>
+
+            <div class="d-flex gap-2 flex-wrap">
+                <form method="get" class="d-flex gap-2 align-items-center flex-wrap">
+                    <input type="date" name="start_date" value="{{ start_date }}" class="form-control form-control-sm" style="width: auto;" />
+                    <span class="text-muted small">to</span>
+                    <input type="date" name="end_date" value="{{ end_date }}" class="form-control form-control-sm" style="width: auto;" />
+                    <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+                    {% if start_date or end_date %}
+                    <a href="{% url 'my_attendance' %}" class="btn btn-outline-secondary btn-sm">Clear</a>
+                    {% endif %}
+                </form>
+
+                <a href="{% url 'export_my_attendance' %}?start_date={{ start_date }}&end_date={{ end_date }}" class="btn btn-success btn-sm">
+                    <i class="material-icons-round fs-6">download</i> Export CSV
+                </a>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>First In</th>
+                        <th>Last Out</th>
+                        <th>Working Hours</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rec in records %}
+                    <tr>
+                        <td class="fw-semibold">{{ rec.date|date:"Y-m-d (D)" }}</td>
+                        <td>
+                            <span class="badge bg-light text-dark border">
+                                <i class="material-icons-round align-middle fs-6 text-success me-1">login</i>
+                                {{ rec.in_time }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border">
+                                <i class="material-icons-round align-middle fs-6 text-danger me-1">logout</i>
+                                {{ rec.out_time }}
+                            </span>
+                        </td>
+                        <td class="fw-bold text-primary">{{ rec.working_hours }}</td>
+                        <td>
+                            {% if rec.is_present %}
+                            <span class="badge bg-success bg-opacity-10 text-success">Present</span>
+                            {% else %}
+                            <span class="badge bg-danger bg-opacity-10 text-danger">Absent</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-muted">
+                            <i class="material-icons-round fs-1 text-muted opacity-50 d-block mb-2">event_busy</i>
+                            No attendance records found for this period.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
