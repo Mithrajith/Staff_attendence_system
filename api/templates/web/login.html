@@ -163,9 +163,9 @@ async function loadDepartments() {
 
 async function afterAuth() {
   me = await api("/users/me", { auth: true });
-  if (me.role === "admin") {
+  if (me.role === "admin" || me.role === "system") {
     sessionStorage.setItem("token", token);
-    location.href = "/admin";
+    location.href = me.role === "admin" ? "/admin" : "/kiosk";
     return;
   }
   try { info = await api("/face/enrollment", { auth: true }); } catch {}

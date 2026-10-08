@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     jwt_secret_key: SecretStr
     jwt_algorithm: Literal["HS256", "HS384", "HS512"] = "HS256"
     access_token_expire_minutes: int = Field(30, ge=1)
+    # The kiosk (system user) stays signed in on a shared screen, so its token lives longer.
+    kiosk_token_expire_minutes: int = Field(720, ge=1)
+    # A face narrower than this fraction of the frame width is ignored (people walking past in the background).
+    kiosk_min_face_ratio: float = Field(0.12, gt=0, lt=1)
     password_reset_expire_minutes: int = Field(30, ge=5)
 
     # Email. "console" only logs the message (development); production must use smtp.

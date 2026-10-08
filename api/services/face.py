@@ -48,12 +48,29 @@ def extract_single_face(image_b64: str) -> np.ndarray | None:
     return frame[y1:y2, x1:x2]
 
 
-def identify_faces(crops: list[np.ndarray]) -> list[str]:
-    """Identity (vector-DB emp_id) for each crop, or "Unknown"."""
+def identify_scored(crops: list[np.ndarray]) -> list[tuple[str, float]]:
+    """(identity, similarity) for each crop; identity is "Unknown" when nothing in the vector DB is close enough."""
     from inference.services.face_recognition_service import get_recognizer
 
     recognizer = get_recognizer()
-    return [r.identity for r in recognizer.identify_batch(recognizer.embed_batch(crops))]
+    return [(r.identity, r.confidence) for r in recognizer.identify_batch(recognizer.embed_batch(crops))]
+
+
+def identify_faces(crops: list[np.ndarray]) -> list[str]:
+    """Identity (vector-DB emp_id) for each crop, or "Unknown"."""
+    return [identity for identity, _ in identify_scored(crops)]
+
+
+def count_faces(image_b64: str, min_ratio: float) -> int:
+    """Faces at least `min_ratio` of the frame width wide (cheap detection only, no recognition)."""
+    from inference.api import decode_base64_image
+    from inference.pipeline import get_pipeline
+
+    frame = decode_base64_image(image_b64)
+    if frame is None:
+        return 0
+    min_px = min_ratio * frame.shape[1]
+    return sum(1 for d in get_pipeline().detector.detect(frame) if d.box[2] - d.box[0] >= min_px)
 
 
 def vector_count(user_id: int) -> int:

@@ -33,3 +33,10 @@ def admin_page(request: Request):
     return _templates.TemplateResponse(
         request, "admin.html", {"api": get_settings().api_prefix}, headers=_HEADERS
     )
+
+
+@router.get("/kiosk")  # same: a shell for the system user's check-in/out screen
+def kiosk_page(request: Request):
+    return _templates.TemplateResponse(
+        request, "kiosk.html", {"api": get_settings().api_prefix}, headers=_HEADERS
+    )

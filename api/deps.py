@@ -2,7 +2,7 @@
 
 Admins hold every permission. Staff hold none: they only reach their own data, which route
 handlers allow via an explicit "is self" check. The `system` role is intentionally empty until
-its permissions are defined: add them to ROLE_PERMISSIONS.
+its permissions are defined: add them to ROLE_PERMISSIONS (today: the kiosk only).
 """
 
 from enum import Enum
@@ -27,11 +27,12 @@ class Permission(str, Enum):
     attendance_mark_self = "attendance:mark_self"  # check in / out as yourself
     attendance_read_any = "attendance:read_any"  # all users' records and raw events
     admin_summary = "admin:summary"  # dashboard counters
+    kiosk_scan = "kiosk:scan"  # shared check-in/out screen: recognize a face and record attendance for that person
 
 
 ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
     Role.admin: frozenset(Permission),
-    Role.system: frozenset(),  # TBD
+    Role.system: frozenset({Permission.kiosk_scan}),  # the check-in/out kiosk; more TBD
     Role.staff: frozenset({Permission.attendance_mark_self}),
 }
 

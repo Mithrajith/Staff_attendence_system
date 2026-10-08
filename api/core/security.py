@@ -24,9 +24,9 @@ def verify_password(password: str, password_hash: str | None) -> bool:
         return False
 
 
-def create_access_token(user_id: int, token_version: int) -> tuple[str, int]:
+def create_access_token(user_id: int, token_version: int, minutes: int | None = None) -> tuple[str, int]:
     s = get_settings()
-    expires = timedelta(minutes=s.access_token_expire_minutes)
+    expires = timedelta(minutes=minutes or s.access_token_expire_minutes)
     now = datetime.now(timezone.utc)
     payload = {"sub": str(user_id), "tv": token_version, "iat": now, "exp": now + expires}
     return jwt.encode(payload, s.jwt_secret_key.get_secret_value(), algorithm=s.jwt_algorithm), int(expires.total_seconds())
@@ -43,6 +43,34 @@ def decode_access_token(token: str) -> dict | None:
         )
     except jwt.PyJWTError:
         return None
+
+
+MATCH_TOKEN_SECONDS = 120
+
+
+def create_match_token(person_id: int, kiosk_id: int, confidence: float) -> str:
+    """Proof that kiosk `kiosk_id` just recognized `person_id`. Has no `tv`/`sub`, so it is never a valid login token."""
+    s = get_settings()
+    now = datetime.now(timezone.utc)
+    payload = {
+        "purpose": "kiosk_match",
+        "pid": person_id,
+        "kid": kiosk_id,
+        "conf": confidence,
+        "exp": now + timedelta(seconds=MATCH_TOKEN_SECONDS),
+    }
+    return jwt.encode(payload, s.jwt_secret_key.get_secret_value(), algorithm=s.jwt_algorithm)
+
+
+def decode_match_token(token: str, kiosk_id: int) -> dict | None:
+    s = get_settings()
+    try:
+        data = jwt.decode(
+            token, s.jwt_secret_key.get_secret_value(), algorithms=[s.jwt_algorithm], options={"require": ["exp", "pid"]}
+        )
+    except jwt.PyJWTError:
+        return None
+    return data if data.get("purpose") == "kiosk_match" and data.get("kid") == kiosk_id else None
 
 
 def new_reset_token() -> tuple[str, str]:

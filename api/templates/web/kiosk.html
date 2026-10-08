@@ -1,0 +1,598 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Check in / out</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+    }
+
+    body {
+      font: 18px/1.4 system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+      background: #f2f2f2;
+      color: #111;
+      overflow: hidden;
+    }
+
+    #cam {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+      background: #e4e4e4;
+    }
+
+    #guide {
+      position: fixed;
+      left: 50%;
+      top: 46%;
+      width: min(42vh, 70vw);
+      height: min(54vh, 90vw);
+      transform: translate(-50%, -50%);
+      border: 3px solid rgba(255, 255, 255, .9);
+      border-radius: 50%;
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, .15);
+      pointer-events: none;
+    }
+
+    body.counting #guide {
+      border-color: #1a7f37;
+    }
+
+    #top {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 24px;
+      background: rgba(255, 255, 255, .92);
+      font-size: 16px;
+    }
+
+    #top a {
+      color: #666;
+      font-size: 13px;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    #prompt {
+      position: fixed;
+      left: 50%;
+      bottom: 40px;
+      transform: translateX(-50%);
+      max-width: 90vw;
+      padding: 14px 32px;
+      background: rgba(255, 255, 255, .94);
+      font-size: 28px;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, .8);
+    }
+
+    .card {
+      width: min(92vw, 440px);
+      padding: 32px;
+      background: #fff;
+      border: 1px solid #ccc;
+      text-align: center;
+    }
+
+    .card svg {
+      display: block;
+      margin: 0 auto;
+    }
+
+    #tick {
+      width: 96px;
+      height: 96px;
+    }
+
+    #pTitle {
+      margin: 12px 0 4px;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: #666;
+    }
+
+    #popup.err #pTitle {
+      color: #b42318;
+      font-size: 28px;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    #popup.err #pName {
+      font-size: 24px;
+    }
+
+    #pName {
+      font-size: 32px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
+    #pDept,
+    #pEmp {
+      color: #444;
+      font-size: 20px;
+    }
+
+    #pAction {
+      margin-top: 12px;
+      font-size: 22px;
+      font-weight: 600;
+    }
+
+    #pAction.in,
+    .man-in {
+      color: #1a7f37;
+    }
+
+    #pAction.out,
+    .man-out {
+      color: #b42318;
+    }
+
+    .man {
+      width: 200px;
+      height: 140px;
+      margin-top: 8px;
+    }
+
+    .runner {
+      animation: run .9s ease-out both;
+    }
+
+    @keyframes run {
+      from {
+        transform: translateX(-70px);
+        opacity: 0;
+      }
+
+      to {
+        transform: none;
+        opacity: 1;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .runner {
+        animation: none;
+      }
+    }
+
+    .screen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+      background: #fff;
+      text-align: center;
+      border-top: 10px solid #1a7f37;
+    }
+
+    .screen.out {
+      border-top-color: #b42318;
+    }
+
+    .screen h1 {
+      margin: 0 0 16px;
+      font-size: clamp(32px, 6vw, 64px);
+      line-height: 1.15;
+    }
+
+    .screen p {
+      margin: 0;
+      max-width: 760px;
+      font-size: clamp(20px, 3vw, 32px);
+      color: #444;
+    }
+
+    #camError h1 {
+      font-size: 28px;
+    }
+
+    .confirm {
+      position: relative;
+    }
+
+    #cLabel {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: #666;
+    }
+
+    #cName {
+      margin-top: 8px;
+      font-size: 32px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
+    #cDept,
+    #cEmp {
+      color: #444;
+      font-size: 20px;
+    }
+
+    .confirm .row {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .confirm .row button {
+      flex: 1;
+      margin: 0;
+      padding: 18px 12px;
+      font-size: 24px;
+      font-weight: 600;
+    }
+
+    .confirm .row button:disabled {
+      background: #e4e4e4;
+      border-color: #ccc;
+      color: #888;
+      cursor: not-allowed;
+    }
+
+    #cNote {
+      margin-top: 16px;
+      font-size: 14px;
+      color: #666;
+    }
+
+    .confirm .x {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 44px;
+      height: 44px;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 0;
+      background: transparent;
+      color: #111;
+    }
+
+    button {
+      margin-top: 24px;
+      padding: 10px 22px;
+      font: inherit;
+      font-size: 16px;
+      border: 1px solid #111;
+      border-radius: 0;
+      background: #111;
+      color: #fff;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+  <video id="cam" autoplay muted playsinline></video>
+  <div id="guide"></div>
+  <div id="top"><span id="clock"></span><a id="logout">Sign out</a></div>
+  <div id="prompt">Look at the camera</div>
+
+  <div id="confirm" class="overlay hidden">
+    <div class="card confirm">
+      <button type="button" id="close" class="x" aria-label="Close, this is not me">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor"
+          stroke-width="2.5" stroke-linecap="round">
+          <line x1="5" y1="5" x2="19" y2="19" />
+          <line x1="19" y1="5" x2="5" y2="19" />
+        </svg>
+      </button>
+      <div id="cLabel">Is this you?</div>
+      <div id="cName"></div>
+      <div id="cDept"></div>
+      <div id="cEmp"></div>
+      <div class="row">
+        <button type="button" id="btnIn" data-action="check_in">Check in</button>
+        <button type="button" id="btnOut" data-action="check_out">Check out</button>
+      </div>
+      <div id="cNote">Not you? Close this window, nothing will be recorded.</div>
+    </div>
+  </div>
+
+  <div id="popup" class="overlay hidden">
+    <div class="card">
+      <svg id="tick" viewBox="0 0 100 100" aria-hidden="true">
+        <circle cx="50" cy="50" r="46" fill="#1a7f37" />
+        <polyline points="28,52 44,68 74,34" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round"
+          stroke-linejoin="round" />
+      </svg>
+      <div id="pTitle"></div>
+      <div id="pName"></div>
+      <div id="pDept"></div>
+      <div id="pEmp"></div>
+
+      <!-- Check in: stick man running through the door (green) -->
+      <svg id="manIn" class="man man-in hidden" viewBox="0 0 200 140" aria-hidden="true" fill="none"
+        stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="8" y1="130" x2="192" y2="130" stroke-width="3" />
+        <rect x="130" y="20" width="54" height="110" fill="#e6f4ea" />
+        <polygon points="130,20 112,30 112,120 130,130" fill="#fff" />
+        <circle cx="120" cy="78" r="2" fill="currentColor" />
+        <g transform="translate(86 92)">
+          <g class="runner">
+            <circle cx="12" cy="-42" r="8" fill="currentColor" />
+            <polyline points="0,0 8,-30" />
+            <polyline points="8,-26 22,-18 32,-28" />
+            <polyline points="8,-26 -6,-20 -14,-8" />
+            <polyline points="0,0 16,8 10,36" />
+            <polyline points="0,0 -10,16 -28,22" />
+            <line x1="-40" y1="-30" x2="-56" y2="-30" stroke-width="3" />
+            <line x1="-34" y1="-14" x2="-54" y2="-14" stroke-width="3" />
+          </g>
+        </g>
+      </svg>
+
+      <!-- Check out: stick man running out past the gate (red) -->
+      <svg id="manOut" class="man man-out hidden" viewBox="0 0 200 140" aria-hidden="true" fill="none"
+        stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="8" y1="130" x2="192" y2="130" stroke-width="3" />
+        <path d="M26 130 V34 H78 V130" />
+        <line x1="26" y1="34" x2="40" y2="20" stroke-width="3" />
+        <line x1="78" y1="34" x2="64" y2="20" stroke-width="3" />
+        <line x1="40" y1="20" x2="64" y2="20" stroke-width="3" />
+        <g transform="translate(130 92)">
+          <g class="runner">
+            <circle cx="12" cy="-42" r="8" fill="currentColor" />
+            <polyline points="0,0 8,-30" />
+            <polyline points="8,-26 22,-18 32,-28" />
+            <polyline points="8,-26 -6,-20 -14,-8" />
+            <polyline points="0,0 16,8 10,36" />
+            <polyline points="0,0 -10,16 -28,22" />
+            <line x1="-34" y1="-30" x2="-50" y2="-30" stroke-width="3" />
+            <line x1="-34" y1="-14" x2="-50" y2="-14" stroke-width="3" />
+          </g>
+        </g>
+        <polyline points="168,60 182,70 168,80" stroke-width="3" />
+      </svg>
+
+      <div id="pAction"></div>
+    </div>
+  </div>
+
+  <div id="greeting" class="screen hidden">
+    <h1 id="gHead"></h1>
+    <p id="gSub"></p>
+  </div>
+
+  <div id="camError" class="screen hidden" style="border-top-color:#b42318">
+    <h1>Camera unavailable</h1>
+    <p>Allow camera access for this page, then try again.</p>
+    <button type="button" id="retry">Try again</button>
+  </div>
+
+  <script>
+    const API = "{{ api }}";
+    const $ = (id) => document.getElementById(id);
+    const token = sessionStorage.getItem("token");
+    const HOLD_MS = 3000;       // how long a face must stay in view before we identify it
+    const POPUP_MS = 3500;
+    const GREETING_MS = 6000;
+    const CONFIRM_MS = 20000;   // the confirm window closes itself (nothing recorded) after this long
+    const CLEAR_MS = 1500;      // after any outcome, the screen must be empty this long before the next person
+
+    function signOut() { sessionStorage.removeItem("token"); location.replace("/"); }
+    $("logout").addEventListener("click", signOut);
+    if (!token) signOut();
+
+    async function post(path, body) {
+      const res = await fetch(API + path, {
+        method: "POST",
+        headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (res.status === 401 || res.status === 403) { signOut(); throw new Error("auth"); }
+      if (!res.ok) throw new Error("http " + res.status);
+      return res.json();
+    }
+
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const canvas = document.createElement("canvas");
+    function frame(width, quality) {
+      const v = $("cam");
+      if (!v.videoWidth) return null;
+      canvas.width = width;
+      canvas.height = Math.round((v.videoHeight * width) / v.videoWidth);
+      canvas.getContext("2d").drawImage(v, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL("image/jpeg", quality);
+    }
+
+    function setPrompt(text) { $("prompt").textContent = text; }
+    function tickClock() { $("clock").textContent = new Date().toLocaleString([], { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); }
+    tickClock(); setInterval(tickClock, 15000);
+
+    // ---- Greetings: [headline, sub-line]; {n} is the first name ----
+    const GREET = {
+      in: {
+        morning: [["Good morning, {n}!", "Have a productive day!"], ["Good morning, {n}!", "Wishing you a bright and focused day ahead."], ["Welcome in, {n}!", "Make today a great one."]],
+        afternoon: [["Good afternoon, {n}!", "Hope the rest of your day goes smoothly."], ["Welcome, {n}!", "Let's make the afternoon count."]],
+        evening: [["Good evening, {n}!", "Thanks for being here. Have a smooth shift."]],
+      },
+      out: {
+        day: [["Thank you, {n}!", "Take care, and see you soon."], ["Thanks for your hard work, {n}!", "Have a good rest of the day."]],
+        evening: [["Thank you, {n}!", "Get some fresh air, spend time with family & friends."], ["Great work today, {n}!", "Switch off, relax and enjoy your evening."], ["Well done, {n}!", "Step outside, take a walk, call someone you love."]],
+        night: [["Thank you, {n}!", "Get home safe and rest well."]],
+      },
+    };
+    const pick = (a) => a[Math.floor(Math.random() * a.length)];
+    function greeting(r) {
+      const h = r.hour, first = r.name.split(" ")[0];
+      const [head, sub] = r.action === "check_in"
+        ? pick(GREET.in[h < 12 ? "morning" : h < 17 ? "afternoon" : "evening"])
+        : pick(GREET.out[h < 17 ? "day" : h < 21 ? "evening" : "night"]);
+      return [head.replace("{n}", first), sub];
+    }
+
+    // ---- Screens ----
+    async function card({ tick, error, title, name, dept, emp, action, actionText }) {
+      $("popup").classList.toggle("err", !!error);
+      $("tick").classList.toggle("hidden", !tick);
+      $("pTitle").textContent = title || "";
+      $("pName").textContent = name || "";
+      $("pDept").textContent = dept || "";
+      $("pEmp").textContent = emp ? "ID " + emp : "";
+      $("manIn").classList.toggle("hidden", !tick || action !== "check_in");
+      $("manOut").classList.toggle("hidden", !tick || action !== "check_out");
+      $("pAction").textContent = actionText || "";
+      $("pAction").className = tick ? (action === "check_in" ? "in" : "out") : "";
+      $("popup").classList.remove("hidden");
+      await sleep(POPUP_MS);
+      $("popup").classList.add("hidden");
+    }
+    const timeText = (r) => new Date(r.occurred_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const verb = (r) => (r.action === "check_in" ? "Checked in" : "Checked out") + " at " + timeText(r);
+
+    async function showRecorded(r) {
+      await card({ tick: true, title: "Captured", name: r.name, dept: r.department || "No department", emp: r.employee_id, action: r.action, actionText: verb(r) });
+      const [head, sub] = greeting(r);
+      $("gHead").textContent = head;
+      $("gSub").textContent = sub;
+      $("greeting").classList.toggle("out", r.action === "check_out");
+      $("greeting").classList.remove("hidden");
+      await sleep(GREETING_MS);
+      $("greeting").classList.add("hidden");
+    }
+
+    // Every non-recorded outcome is an error card; `r` is the API result.
+    const ERRORS = {
+      unknown: (r) => ({ title: "Oops!", name: "It seems your data haven't registered", dept: "Please contact " + (r.contact || "an administrator") }),
+      already_checked_in: (r) => ({ title: "Already checked in", name: r.name, dept: r.department, actionText: "Choose Check out when you leave" }),
+      not_checked_in: (r) => ({ title: "You haven't checked in today", name: r.name, dept: r.department, actionText: "Choose Check in first" }),
+      expired: () => ({ title: "Session expired", name: "Please look at the camera again" }),
+      no_face: () => ({ title: "Face not clear", name: "We couldn't get a clear view of your face", dept: "Face the camera, remove anything covering it and try again" }),
+      unavailable: () => ({ title: "Service unavailable", name: "Please try again in a moment" }),
+    };
+
+    // ---- Flow: face held 3 s -> identify -> confirm window (Check in / Check out / X) -> record -> popup + greeting ----
+    let busy = false, since = null, misses = 0, noFace = 0, needClear = false, clearSince = null;
+
+    // Resolves with "check_in" / "check_out", or null if the person closes the window (X) or it times out.
+    function confirmPerson(p) {
+      return new Promise((resolve) => {
+        $("cName").textContent = p.name;
+        $("cDept").textContent = p.department || "No department";
+        $("cEmp").textContent = p.employee_id ? "ID " + p.employee_id : "";
+        $("btnIn").disabled = p.checked_in === true;     // only the valid action is enabled
+        $("btnOut").disabled = p.checked_in === false;
+        $("confirm").classList.remove("hidden");
+        const done = (choice) => {
+          clearTimeout(timer);
+          $("confirm").classList.add("hidden");
+          $("close").onclick = $("btnIn").onclick = $("btnOut").onclick = null;
+          resolve(choice);
+        };
+        const timer = setTimeout(() => done(null), CONFIRM_MS);
+        $("close").onclick = () => done(null);
+        $("btnIn").onclick = () => done("check_in");
+        $("btnOut").onclick = () => done("check_out");
+      });
+    }
+
+    async function identify() {
+      busy = true; since = null;
+      document.body.classList.remove("counting");
+      setPrompt("Recognizing...");
+      try {
+        const r = await post("/kiosk/identify", { image: frame(640, 0.85) });
+        if (r.status === "no_face" && ++noFace < 3) { setPrompt("Couldn't see you clearly. Face the camera"); return; }
+        noFace = 0; needClear = true;
+        if (r.status !== "matched") { await card({ error: true, ...ERRORS[r.status](r) }); return; }
+
+        const choice = await confirmPerson(r);
+        if (!choice) return;   // wrong person or timed out: nothing is recorded
+        setPrompt("Saving...");
+        const rec = await post("/kiosk/record", { match_token: r.match_token, action: choice });
+        if (rec.status === "recorded") await showRecorded(rec);
+        else await card({ error: true, ...ERRORS[rec.status](rec) });
+      } catch (e) {
+        if (e.message === "auth") return;
+        noFace = 0; needClear = true;
+        await card({ error: true, ...ERRORS.unavailable() });
+      } finally { busy = false; }
+    }
+
+    async function tick() {
+      try {
+        const img = busy ? null : frame(480, 0.6);
+        if (img) {
+          const { faces } = await post("/kiosk/detect", { image: img });
+          const now = Date.now();
+          if (needClear) {
+            if (faces === 0) { clearSince ??= now; if (now - clearSince >= CLEAR_MS) { needClear = false; clearSince = null; } }
+            else clearSince = null;
+            setPrompt(faces ? "Please step away, then look at the camera again" : "Look at the camera");
+          } else if (faces === 1) {
+            misses = 0; since ??= now;
+            const left = Math.ceil((HOLD_MS - (now - since)) / 1000);
+            if (left > 0) { document.body.classList.add("counting"); setPrompt("Hold still... " + left); }
+            else await identify();
+          } else if (++misses >= 2) {   // tolerate one missed detection
+            since = null; document.body.classList.remove("counting");
+            setPrompt(faces > 1 ? "One person at a time, please" : "Look at the camera");
+          }
+        }
+      } catch (e) {
+        if (e.message !== "auth") { since = null; setPrompt("Service unavailable. Retrying..."); }
+      }
+      setTimeout(tick, 500);
+    }
+
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" }, audio: false });
+        stream.getVideoTracks()[0].addEventListener("ended", () => $("camError").classList.remove("hidden"));
+        $("cam").srcObject = stream;
+        $("camError").classList.add("hidden");
+        try { await navigator.wakeLock.request("screen"); } catch { }   // keep the screen on; not available everywhere
+      } catch { $("camError").classList.remove("hidden"); }
+    }
+    $("retry").addEventListener("click", startCamera);
+    startCamera();
+    tick();
+  </script>
+</body>
+
+</html>

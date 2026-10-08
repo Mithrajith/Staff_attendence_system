@@ -92,6 +92,29 @@ def mark(db: Session, user: User, action: AttendanceType) -> AttendanceEvent:
     return event
 
 
+def is_checked_in(db: Session, user: User) -> bool:
+    return _last_event_type(db, user.id, today()) == AttendanceType.check_in
+
+
+def record_scan(db: Session, user: User, action: AttendanceType, face_confidence: float) -> AttendanceEvent | None:
+    """Kiosk flow: the face was recognized just now, so no Redis flag is needed.
+
+    Returns None (nothing saved) if the action is out of sequence: in while already in, or out while not in.
+    """
+    db.execute(select(User.id).where(User.id == user.id).with_for_update()).one()
+    day = today()
+    checked_in = _last_event_type(db, user.id, day) == AttendanceType.check_in
+    if checked_in == (action == AttendanceType.check_in):
+        db.rollback()
+        return None
+    event = AttendanceEvent(
+        user_id=user.id, event_type=action, occurred_at=utcnow(), work_date=day, face_confidence=face_confidence
+    )
+    db.add(event)
+    db.commit()
+    return event
+
+
 def daily_summaries(
     db: Session, *, date_from: date, date_to: date, user_id: int | None = None, limit: int | None = None, offset: int = 0
 ):

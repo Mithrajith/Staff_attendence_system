@@ -41,7 +41,8 @@ def login(body: LoginRequest, db: DB) -> TokenResponse:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Account is deactivated")
     user.last_login_at = utcnow()
     db.commit()
-    token, expires_in = create_access_token(user.id, user.token_version)
+    minutes = get_settings().kiosk_token_expire_minutes if user.role == Role.system else None
+    token, expires_in = create_access_token(user.id, user.token_version, minutes)
     return TokenResponse(access_token=token, expires_in=expires_in)
 
 
