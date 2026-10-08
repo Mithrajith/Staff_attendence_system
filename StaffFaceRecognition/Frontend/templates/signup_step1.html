@@ -27,12 +27,12 @@
             --radius-lg: 0.75rem;
             --radius-xl: 1rem;
             --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.1);
-            --shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.1);
+            --shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.15);
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+            background: radial-gradient(circle at top, #1e1b4b 0%, #0f172a 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -42,12 +42,12 @@
         }
         .signup-container {
             width: 100%;
-            max-width: 600px;
+            max-width: 620px;
             background: var(--surface);
             border-radius: var(--radius-xl);
-            box-shadow: var(--shadow-xl);
+            box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.5);
             overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
         }
         .header {
             background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);

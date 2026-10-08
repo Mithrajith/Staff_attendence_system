@@ -99,6 +99,7 @@
             overflow-x: hidden;
             position: relative;
             min-height: 100vh;
+            background: radial-gradient(circle at top, #1e1b4b 0%, #0f172a 100%);
         }
         
         .login-page {
@@ -106,42 +107,24 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, var(--secondary), var(--primary));
+            background: transparent;
             padding: var(--spacing-6);
             position: relative;
             overflow: hidden;
         }
         
-        /* Animated Background */
+        /* Animated Background Subtle Radial Glow */
         .login-page::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, var(--primary-dark), transparent);
-            opacity: 0.3;
+            top: -20%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
+            pointer-events: none;
             z-index: 0;
-            animation: wave 15s linear infinite;
-        }
-        
-        .login-page::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(45deg, transparent, var(--primary-light));
-            opacity: 0.2;
-            z-index: 0;
-            animation: wave 20s linear infinite reverse;
-        }
-        
-        @keyframes wave {
-            0% { transform: translateX(-50%) translateY(-50%) rotate(0deg); }
-            100% { transform: translateX(-50%) translateY(-50%) rotate(360deg); }
         }
         
         .login-container {
@@ -149,17 +132,18 @@
             z-index: 1;
             background: var(--white);
             border-radius: var(--radius-2xl);
-            box-shadow: var(--shadow-xl);
+            box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.15);
             overflow: hidden;
             width: 100%;
-            max-width: 900px;
+            max-width: 920px;
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            animation: container-fade 0.8s var(--transition-smooth);
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            animation: container-fade 0.6s var(--transition-smooth);
         }
         
         .face-scan-container {
-            background: linear-gradient(135deg, var(--primary-light), var(--primary));
+            background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
             padding: var(--spacing-10);
             display: flex;
             flex-direction: column;
@@ -553,7 +537,7 @@
     <div class="login-page">
         <div class="login-container">
             <div class="face-scan-container">
-                <h1 class="app-title">Staff Face Recognition</h1>
+                <h1 class="app-title">FaceAttend AI</h1>
                 <div class="scan-animation">
                     <div class="face-outline">
                         <span class="material-icons-round face-icon">face</span>
@@ -561,7 +545,7 @@
                     <div class="scanning-line"></div>
                 </div>
                 <div class="scan-status">Biometric Authentication</div>
-                <p class="scan-subtext">Advanced facial recognition system for secure staff attendance tracking</p>
+                <p class="scan-subtext">Advanced facial recognition system for automated staff attendance tracking</p>
                 
                 <!-- Animated particles -->
                 <div class="particles" id="particles"></div>
@@ -570,11 +554,8 @@
             <div class="login-form">
                 <div class="form-header">
                     <h2 class="form-title">Portal Sign In</h2>
-                    <p class="form-subtitle">Access Staff or Admin Attendance Portals</p>
+                    <p class="form-subtitle">Access Faculty or Administrator Portals</p>
                 </div>
-
-                <!-- Role 1: System Kiosk Banner -->
-               
                 
                 {% if messages %}
                     {% for message in messages %}
@@ -587,9 +568,9 @@
                 <form method="post">
                     {% csrf_token %}
                     <div class="form-group">
-                        <label class="form-label" for="username">Username</label>
+                        <label class="form-label" for="username">Username or Faculty ID</label>
                         <div class="input-wrapper">
-                            <input type="text" id="username" name="username" class="form-control" required autocomplete="username" placeholder="Username" />
+                            <input type="text" id="username" name="username" class="form-control" required autocomplete="username" placeholder="Username or Faculty ID" />
                             <span class="material-icons-round input-icon">person</span>
                         </div>
                     </div>
@@ -605,11 +586,14 @@
                         <span class="material-icons-round button-icon">arrow_forward</span>
                     </button>
 
-                    <div style="margin-top: 1.25rem; text-align: center;">
-                        <span style="color: var(--gray); font-size: var(--font-size-sm);">New Faculty?</span>
-                        <a href="{% url 'signup' %}" style="display: block; margin-top: 0.5rem; padding: 0.75rem 1.25rem; background: var(--surface-2); border: 1.5px solid var(--primary-light); color: var(--primary); border-radius: var(--radius-lg); font-weight: 600; text-align: center; text-decoration: none; transition: var(--transition-base);">
-                            <span class="material-icons-round" style="vertical-align: middle; font-size: 1.15rem; margin-right: 4px;">person_add</span>
-                            Sign Up
+                    <div style="margin-top: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                        <a href="{% url 'signup' %}" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1.25rem; background: var(--surface-2); border: 1.5px solid var(--primary-light); color: var(--primary); border-radius: var(--radius-lg); font-weight: 600; text-decoration: none; transition: var(--transition-base);">
+                            <span class="material-icons-round" style="font-size: 1.15rem;">person_add</span>
+                            <span>New Faculty Sign Up</span>
+                        </a>
+                        <a href="{% url 'kiosk' %}" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.65rem 1.25rem; background: transparent; border: 1px solid var(--gray-light); color: var(--gray); border-radius: var(--radius-lg); font-size: var(--font-size-sm); text-decoration: none; transition: var(--transition-base);">
+                            <span class="material-icons-round" style="font-size: 1.1rem; color: var(--primary);">camera_alt</span>
+                            <span>Attendance Kiosk Terminal</span>
                         </a>
                     </div>
                 </form>

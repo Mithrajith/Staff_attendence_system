@@ -1,142 +1,146 @@
 {% extends 'base.html' %} 
 {% load static %} 
 
-{% block page_title %}Attendance Reports{% endblock %}
+{% block page_title %}Faculty Attendance Reports{% endblock %}
 
 {% block content %}
 <!-- Filter Controls Card -->
-<div class="card mb-4 slide-in-up">
-  <div class="card-header">
-    <h3 class="card-title">
-      <span class="material-icons-round">filter_list</span>
-      Filter Reports
-    </h3>
+<div class="card mb-4 border-0">
+  <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between">
+    <h4 class="card-title fs-5 mb-0 d-flex align-items-center gap-2">
+      <span class="material-icons-round text-primary">tune</span>
+      <span>Report Filter Controls</span>
+    </h4>
   </div>
-  <div class="card-body">
+  <div class="card-body p-4">
     <form id="reportFilterForm" method="GET" action="">
-      <div class="row">
-        <div class="col-md-4">
-          <div class="form-group mb-3">
-            <label class="form-label">Date Range</label>
-            <div class="d-flex align-items-center gap-2">
-              <div class="input-group">
-                <span class="input-group-text"><span class="material-icons-round">event</span></span>
-                <input type="date" id="startDate" name="start_date" class="form-control" value="{{ request.GET.start_date|default:'' }}"/>
-              </div>
-              <span class="date-separator text-gray">to</span>
-              <div class="input-group">
-                <span class="input-group-text"><span class="material-icons-round">event</span></span>
-                <input type="date" id="endDate" name="end_date" class="form-control" value="{{ request.GET.end_date|default:'' }}"/>
-              </div>
+      <div class="row g-3">
+        <div class="col-lg-4 col-md-6">
+          <label class="form-label small fw-semibold text-muted">Date Range</label>
+          <div class="d-flex align-items-center gap-2">
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0"><span class="material-icons-round fs-6 text-muted">event</span></span>
+              <input type="date" id="startDate" name="start_date" class="form-control border-start-0" value="{{ request.GET.start_date|default:'' }}" />
+            </div>
+            <span class="text-muted small">to</span>
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0"><span class="material-icons-round fs-6 text-muted">event</span></span>
+              <input type="date" id="endDate" name="end_date" class="form-control border-start-0" value="{{ request.GET.end_date|default:'' }}" />
             </div>
           </div>
         </div>
-        <div class="col-md-4">
-          <div class="form-group mb-3">
-            <label class="form-label">Department</label>
-            <div class="input-group">
-              <span class="input-group-text"><span class="material-icons-round">business</span></span>
-              <select id="departmentFilter" name="department" class="form-control">
-                <option value="">All Departments</option>
-                {% for dept in departments %}
-                <option value="{{ dept }}" {% if request.GET.department == dept %}selected{% endif %}>{{ dept }}</option>
-                {% endfor %}
-              </select>
-            </div>
+
+        <div class="col-lg-4 col-md-6">
+          <label class="form-label small fw-semibold text-muted">Department</label>
+          <div class="input-group">
+            <span class="input-group-text bg-light border-end-0"><span class="material-icons-round fs-6 text-muted">business</span></span>
+            <select id="departmentFilter" name="department" class="form-select border-start-0">
+              <option value="">All Departments</option>
+              {% for dept in departments %}
+              <option value="{{ dept }}" {% if request.GET.department == dept %}selected{% endif %}>{{ dept }}</option>
+              {% endfor %}
+            </select>
           </div>
         </div>
-        <div class="col-md-4">
-          <div class="form-group mb-3">
-            <label class="form-label">Search</label>
-            <div class="input-group">
-              <span class="input-group-text"><span class="material-icons-round">search</span></span>
-              <input type="text" id="searchInput" name="search" class="form-control" placeholder="Search by ID or name" value="{{ request.GET.search|default:'' }}"/>
-            </div>
+
+        <div class="col-lg-4 col-md-12">
+          <label class="form-label small fw-semibold text-muted">Search Faculty</label>
+          <div class="input-group">
+            <span class="input-group-text bg-light border-end-0"><span class="material-icons-round fs-6 text-muted">search</span></span>
+            <input type="text" id="searchInput" name="search" class="form-control border-start-0" placeholder="Search by Staff ID or name" value="{{ request.GET.search|default:'' }}" />
           </div>
         </div>
       </div>
-      <div class="row mt-2">
-        <div class="col-12 d-flex gap-2 justify-content-end">
-          <button type="submit" class="btn btn-primary">
-            <span class="material-icons-round">filter_alt</span>
-            Apply Filters
-          </button>
-          <button type="button" class="btn btn-success" onclick="exportReport()">
-            <span class="material-icons-round">download</span>
-            Export
-          </button>
-          <button type="button" id="resetFilters" class="btn btn-outline-secondary">
-            <span class="material-icons-round">restart_alt</span>
-            Reset Filters
-          </button>
-        </div>
+
+      <div class="d-flex flex-wrap gap-2 justify-content-end mt-4 pt-3 border-top">
+        <button type="button" id="resetFilters" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
+          <span class="material-icons-round fs-6">restart_alt</span>
+          <span>Reset</span>
+        </button>
+        <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-1">
+          <span class="material-icons-round fs-6">filter_alt</span>
+          <span>Apply Filters</span>
+        </button>
+        <button type="button" class="btn btn-success d-inline-flex align-items-center gap-1 text-white" onclick="exportReport()">
+          <span class="material-icons-round fs-6">download</span>
+          <span>Export CSV</span>
+        </button>
       </div>
     </form>
   </div>
 </div>
 
-
-
 <!-- Report Data Card -->
-<div class="card slide-in-up" style="animation-delay: 0.3s;">
-  <div class="card-header">
-    <h3 class="card-title">
-      <span class="material-icons-round">assessment</span>
-      Attendance Records
-    </h3>
+<div class="card border-0">
+  <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <h4 class="card-title fs-5 mb-0 d-flex align-items-center gap-2">
+      <span class="material-icons-round text-primary">assessment</span>
+      <span>Attendance Records</span>
+    </h4>
     
-    <div class="card-actions">
-      <div class="d-flex align-items-center">
-        <span class="badge badge-light" id="dateRangeDisplay">
-          {% if start_date and end_date %}
-          {{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}
-          {% else %}
-          All dates
-          {% endif %}
-        </span>
-      </div>
+    <div class="d-flex align-items-center gap-2">
+      <span class="badge" style="background: rgba(99, 102, 241, 0.1); color: var(--primary); font-weight: 600;">
+        Total: {{ attendance_data|length }} records
+      </span>
+      {% if start_date and end_date %}
+      <span class="badge" style="background: #f1f5f9; color: #475569; font-weight: 500;">
+        {{ start_date }} to {{ end_date }}
+      </span>
+      {% endif %}
     </div>
   </div>
   
-  <div class="card-body">
+  <div class="card-body p-0">
     <div class="table-responsive">
-      <table class="table">
+      <table class="table mb-0">
         <thead>
           <tr>
             <th>Date</th>
             <th>Staff ID</th>
             <th>Name</th>
             <th>Department</th>
-            <th>In Time</th>
-            <th>Out Time</th>
+            <th>First In</th>
+            <th>Last Out</th>
             <th>Working Hours</th>
           </tr>
         </thead>
         <tbody id="reportTableBody">
           {% for record in attendance_data %}
           <tr>
-            <td>{{ record.date }}</td>
-            <td>{{ record.emp_id }}</td>
-            <td>{{ record.emp_name }}</td>
-            <td>{{ record.department }}</td>
-            <td>{{ record.time_in_list|default:"--:--" }}</td>
-            <td>{{ record.time_out_list|default:"--:--" }}</td>
+            <td class="fw-semibold">{{ record.date }}</td>
             <td>
-              {% if record.working_hours %}
-              <span class="badge {% if record.working_hours|time:"H:i:s" > "08:00:00" %}badge-success{% else %}badge-warning{% endif %}">
+              <span class="badge" style="background: rgba(99, 102, 241, 0.1); color: #4f46e5; font-weight: 600;">
+                {{ record.emp_id }}
+              </span>
+            </td>
+            <td class="fw-bold text-dark">{{ record.emp_name }}</td>
+            <td>{{ record.department }}</td>
+            <td>
+              <span class="badge" style="background: rgba(16, 185, 129, 0.12); color: #059669; font-weight: 600;">
+                {{ record.time_in_list|default:"--:--" }}
+              </span>
+            </td>
+            <td>
+              <span class="badge" style="background: rgba(245, 158, 11, 0.12); color: #d97706; font-weight: 600;">
+                {{ record.time_out_list|default:"--:--" }}
+              </span>
+            </td>
+            <td>
+              {% if record.working_hours and record.working_hours != "--:--" %}
+              <span class="badge" style="background: rgba(99, 102, 241, 0.12); color: #4f46e5; font-weight: 600;">
                 {{ record.working_hours }}
               </span>
               {% else %}
-              --:--
+              <span class="text-muted">--:--</span>
               {% endif %}
             </td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="7" class="text-center py-4">
-              <div class="empty-state">
-                <span class="material-icons-round">event_busy</span>
-                <p>No attendance records found</p>
+            <td colspan="7" class="text-center py-5">
+              <div class="text-muted">
+                <span class="material-icons-round" style="font-size: 3rem; color: #cbd5e1;">event_busy</span>
+                <p class="mt-2 mb-0 fw-semibold">No attendance records found matching the selected filters</p>
               </div>
             </td>
           </tr>
@@ -148,89 +152,20 @@
 </div>
 {% endblock %}
 
-{% block extra_css %}
-<style>
-  /* Report specific styles */
-  .date-separator {
-    margin: 0 var(--spacing-1);
-  }
-  
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    padding: var(--spacing-1) var(--spacing-3);
-    border-radius: var(--radius-full);
-    font-size: var(--font-size-xs);
-    font-weight: 500;
-  }
-  
-  .badge-success {
-    background-color: rgba(16, 185, 129, 0.1);
-    color: var(--success);
-  }
-  
-  .badge-warning {
-    background-color: rgba(245, 158, 11, 0.1);
-    color: var(--warning);
-  }
-  
-  .badge-light {
-    background-color: var(--surface-2);
-    color: var(--gray);
-    padding: var(--spacing-2) var(--spacing-4);
-    font-weight: 500;
-  }
-  
-  /* Empty state */
-  .empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: var(--spacing-6);
-    color: var(--gray);
-  }
-  
-  .empty-state .material-icons-round {
-    font-size: 48px;
-    margin-bottom: var(--spacing-3);
-    color: var(--gray-light);
-  }
-  
-  /* Responsive adjustments */
-  @media (max-width: 768px) {
-    .date-range-inputs {
-      flex-direction: column;
-      gap: var(--spacing-2);
-    }
-    
-    .date-separator {
-      display: none;
-    }
-  }
-</style>
-{% endblock %}
-
 {% block scripts %}
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    // Reset filters button functionality
     const resetButton = document.getElementById('resetFilters');
-    resetButton.addEventListener('click', function() {
-      window.location.href = window.location.pathname;
-    });
-    
-    // Animate table rows
-    animateTableRows();
+    if (resetButton) {
+      resetButton.addEventListener('click', function() {
+        window.location.href = window.location.pathname;
+      });
+    }
   });
   
   function exportReport() {
-    // Get current filter values from form
     const form = document.getElementById('reportFilterForm');
     const formData = new FormData(form);
-    
-    // Construct URL with query parameters for the export endpoint
-    let url = '/export-report?';
     const params = [];
     
     for (const [key, value] of formData.entries()) {
@@ -239,21 +174,7 @@
       }
     }
     
-    window.location.href = url + params.join('&');
-  }
-  
-  function animateTableRows() {
-    // Apply entrance animations to rows with staggered delay
-    const rows = document.querySelectorAll("#reportTableBody tr");
-    rows.forEach((row, index) => {
-      row.style.opacity = "0";
-      row.style.transform = "translateY(10px)";
-      setTimeout(() => {
-        row.style.transition = "opacity 0.3s ease, transform 0.3s ease";
-        row.style.opacity = "1";
-        row.style.transform = "translateY(0)";
-      }, 100 + (index * 50));
-    });
+    window.location.href = '/export-report?' + params.join('&');
   }
 </script>
 {% endblock %}
