@@ -65,3 +65,9 @@ docker-compose.dev.yml
 .env
 .env.local
 .env.production
+
+qdrant_data*
+redis_data*
+testing/uploads/*
+!testing/uploads/.gitkeep
+
