@@ -35,6 +35,14 @@ def admin_page(request: Request):
     )
 
 
+@router.get("/portal")  # shell for staff: own status and attendance report; every call is authorized by the API
+def portal_page(request: Request):
+    settings = get_settings()
+    return _templates.TemplateResponse(
+        request, "portal.html", {"api": settings.api_prefix, "tz": settings.app_timezone}, headers=_HEADERS
+    )
+
+
 @router.get("/kiosk")  # same: a shell for the system user's check-in/out screen
 def kiosk_page(request: Request):
     return _templates.TemplateResponse(

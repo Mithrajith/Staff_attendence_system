@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from api.core import face_verification
 from api.core.config import get_settings
-from api.routes.models.attendance import AttendanceStatus
+from api.routes.models.attendance import AttendanceStatus, AttendanceToday
 from database.models import AttendanceEvent, AttendanceType, User, utcnow
 
 
@@ -47,8 +47,8 @@ def _last_event_type(db: Session, user_id: int, work_date: date) -> AttendanceTy
     )
 
 
-def get_status(db: Session, user: User) -> AttendanceStatus:
-    """Today's state. A button is enabled only if the face is verified AND the action is valid in sequence."""
+def get_today(db: Session, user: User) -> AttendanceToday:
+    """Today's state from the event log only (no face-verification dependency)."""
     day = today()
     last = _last_event_type(db, user.id, day)
     first_in, last_out = db.execute(
@@ -56,16 +56,26 @@ def get_status(db: Session, user: User) -> AttendanceStatus:
             AttendanceEvent.user_id == user.id, AttendanceEvent.work_date == day
         )
     ).one()
-    verified = _peek_face(user.id) is not None
-    checked_in = last == AttendanceType.check_in
-    return AttendanceStatus(
+    return AttendanceToday(
         work_date=day,
-        face_verified=verified,
-        is_checked_in=checked_in,
-        can_check_in=verified and not checked_in,
-        can_check_out=verified and checked_in,
+        is_checked_in=last == AttendanceType.check_in,
         first_check_in=first_in,
         last_check_out=last_out,
+    )
+
+
+def get_status(db: Session, user: User) -> AttendanceStatus:
+    """Today's state. A button is enabled only if the face is verified AND the action is valid in sequence."""
+    t = get_today(db, user)
+    verified = _peek_face(user.id) is not None
+    return AttendanceStatus(
+        work_date=t.work_date,
+        face_verified=verified,
+        is_checked_in=t.is_checked_in,
+        can_check_in=verified and not t.is_checked_in,
+        can_check_out=verified and t.is_checked_in,
+        first_check_in=t.first_check_in,
+        last_check_out=t.last_check_out,
     )
 
 

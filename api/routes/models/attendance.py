@@ -14,6 +14,15 @@ def _as_utc(v: datetime) -> datetime:
 UTCDateTime = Annotated[datetime, AfterValidator(_as_utc)]
 
 
+class AttendanceToday(BaseModel):
+    """Today's state in the app time zone; `work_date` also tells clients what "today" is."""
+
+    work_date: date
+    is_checked_in: bool
+    first_check_in: UTCDateTime | None
+    last_check_out: UTCDateTime | None
+
+
 class AttendanceStatus(BaseModel):
     """Drives the UI: enable the Check in / Check out buttons from these flags."""
 

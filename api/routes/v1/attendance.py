@@ -15,6 +15,7 @@ from api.routes.models.attendance import (
     AttendanceEventList,
     AttendanceEventOut,
     AttendanceStatus,
+    AttendanceToday,
 )
 from api.services import attendance as svc
 from database.models import AttendanceEvent, AttendanceType, User
@@ -42,6 +43,12 @@ class DateRange:
 Range = Annotated[DateRange, Depends()]
 Limit = Annotated[int, Query(ge=1, le=200)]
 Offset = Annotated[int, Query(ge=0)]
+
+
+@router.get("/me/today", response_model=AttendanceToday)
+def my_today(user: CurrentUser, db: DB) -> AttendanceToday:
+    """The caller's own state for today (first in, last out, currently in?). Used by the staff portal."""
+    return svc.get_today(db, user)
 
 
 @router.get("/me/status", response_model=AttendanceStatus)

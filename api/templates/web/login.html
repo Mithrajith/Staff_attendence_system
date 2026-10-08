@@ -107,7 +107,7 @@
   <section id="done" class="card hidden">
     <h2 id="doneTitle"></h2>
     <p id="doneText"></p>
-    <div class="row"><button type="button" id="startEnroll" class="hidden">Set up face recognition</button><button type="button" id="logout" class="secondary">Log out</button></div>
+    <div class="row"><button type="button" id="toPortal">View my attendance</button><button type="button" id="startEnroll" class="secondary hidden">Set up face recognition</button><button type="button" id="logout" class="secondary">Log out</button></div>
   </section>
 </main>
 
@@ -163,13 +163,13 @@ async function loadDepartments() {
 
 async function afterAuth() {
   me = await api("/users/me", { auth: true });
+  sessionStorage.setItem("token", token);
   if (me.role === "admin" || me.role === "system") {
-    sessionStorage.setItem("token", token);
     location.href = me.role === "admin" ? "/admin" : "/kiosk";
     return;
   }
   try { info = await api("/face/enrollment", { auth: true }); } catch {}
-  if (me.face_enrolled) return finish();
+  if (me.face_enrolled) { location.href = "/portal"; return; }
   $("consent").showModal();
 }
 
@@ -221,7 +221,8 @@ $("resetForm").addEventListener("submit", async (e) => {
 $("decline").addEventListener("click", () => { $("consent").close(); finish(); });
 $("agree").addEventListener("click", () => { $("consent").close(); startCapture(); });
 $("startEnroll").addEventListener("click", () => $("consent").showModal());
-$("logout").addEventListener("click", () => { token = null; me = null; show("login"); });
+$("logout").addEventListener("click", () => { token = null; me = null; sessionStorage.removeItem("token"); show("login"); });
+$("toPortal").addEventListener("click", () => { location.href = "/portal"; });
 
 async function startCapture() {
   shots = []; renderShots(); say("capMsg", "");
@@ -258,6 +259,12 @@ $("submit").addEventListener("click", async () => {
 });
 
 loadDepartments();
+
+// Linked from the portal when face recognition is not set up: resume with the stored session.
+if (!resetToken && new URLSearchParams(location.search).has("enroll") && sessionStorage.getItem("token")) {
+  token = sessionStorage.getItem("token");
+  afterAuth().catch(() => { sessionStorage.removeItem("token"); token = null; });
+}
 if (resetToken) show("reset");
 </script>
 </body>

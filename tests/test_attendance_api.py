@@ -109,6 +109,33 @@ def test_staff_sees_only_own_and_cannot_use_admin_endpoints(client, faces):
     assert client.get(f"{P}/attendance/me/status").status_code == 401
 
 
+def test_today_state_for_portal_needs_no_redis(client, faces, monkeypatch):
+    a, b = make_user("a@x.com"), make_user("b@x.com")
+    ha, hb = auth(client, "a@x.com"), auth(client, "b@x.com")
+    assert client.get(f"{P}/attendance/me/today").status_code == 401
+    t = client.get(f"{P}/attendance/me/today", headers=ha).json()
+    assert t["work_date"] == svc.today().isoformat()
+    assert (t["is_checked_in"], t["first_check_in"], t["last_check_out"]) == (False, None, None)
+
+    faces.add(a)
+    client.post(f"{P}/attendance/check-in", headers=ha)
+    t = client.get(f"{P}/attendance/me/today", headers=ha).json()
+    assert t["is_checked_in"] and t["first_check_in"].endswith("Z") and t["last_check_out"] is None
+    assert client.get(f"{P}/attendance/me/today", headers=hb).json()["first_check_in"] is None  # only own data
+
+    def down(uid):
+        raise redis.ConnectionError("down")
+
+    monkeypatch.setattr(svc.face_verification, "peek", down)
+    assert client.get(f"{P}/attendance/me/today", headers=ha).status_code == 200
+
+
+def test_portal_page_is_served(client):
+    r = client.get("/portal")
+    assert r.status_code == 200 and "text/html" in r.headers["content-type"]
+    assert "Asia/Kolkata" in r.text and r.headers["x-frame-options"] == "DENY"
+
+
 def test_system_role_cannot_mark(client, faces):
     uid = make_user("sys@x.com", Role.system)
     h = auth(client, "sys@x.com")

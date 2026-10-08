@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My attendance - Staff Attendance</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Arial, sans-serif; background: #fff; color: #111; }
+  main { max-width: 860px; margin: 0 auto; padding: 0 20px 64px; }
+  header { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; padding: 24px 0 12px; border-bottom: 1px solid #ddd; }
+  header .title { font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #666; }
+  header .who { font-size: 13px; color: #666; }
+  h2 { font-size: 18px; font-weight: 600; margin: 32px 0 12px; }
+  label { display: block; font-size: 12px; color: #666; }
+  input { display: block; padding: 6px 0; font: inherit; border: 0; border-bottom: 1px solid #ccc; border-radius: 0; background: transparent; color: inherit; outline: 0; }
+  input:focus { border-bottom-color: #111; }
+  button { padding: 7px 16px; font: inherit; border: 1px solid #111; border-radius: 0; background: #111; color: #fff; cursor: pointer; }
+  button.secondary { background: #fff; color: #111; border-color: #ccc; }
+  button.link { padding: 0; border: 0; background: none; color: #111; text-decoration: underline; }
+  button:disabled { opacity: .4; cursor: default; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; }
+  .stats .num { font-size: 26px; font-weight: 600; line-height: 1.2; }
+  .stats .lbl { font-size: 12px; color: #666; }
+  .tabs { display: flex; gap: 20px; flex-wrap: wrap; border-bottom: 1px solid #ddd; margin-bottom: 20px; }
+  .tabs button { padding: 8px 0; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; background: none; color: #666; }
+  .tabs button.on { color: #111; border-bottom-color: #111; }
+  .custom { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 20px; }
+  .scroll { overflow-x: auto; margin-top: 24px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #666; padding: 8px 12px 8px 0; border-bottom: 1px solid #111; white-space: nowrap; }
+  td { padding: 8px 12px 8px 0; border-bottom: 1px solid #eee; white-space: nowrap; }
+  .muted { color: #666; }
+  .warn { color: #b42318; }
+  .msg { min-height: 1.4em; margin-top: 16px; font-size: 13px; color: #666; }
+  .msg.err { color: #b42318; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <span class="title">Staff Attendance</span>
+    <span class="who"><span id="who"></span> <button type="button" id="logout" class="link">Log out</button></span>
+  </header>
+  <div class="msg" id="notice"></div>
+  <div class="msg" id="msg"></div>
+
+  <h2>Today <span class="muted" id="todayDate"></span></h2>
+  <div class="stats" id="today"></div>
+
+  <h2>Report</h2>
+  <div class="tabs" id="tabs"></div>
+  <form class="custom hidden" id="custom">
+    <div><label for="c-from">From</label><input id="c-from" type="date" required></div>
+    <div><label for="c-to">To</label><input id="c-to" type="date" required></div>
+    <button type="submit">Show</button>
+  </form>
+  <div class="stats" id="summary"></div>
+  <div class="scroll" id="days"></div>
+  <p class="muted" id="foot"></p>
+</main>
+
+<script>
+const API = "{{ api }}";
+const TZ = "{{ tz }}";
+const $ = (id) => document.getElementById(id);
+const token = sessionStorage.getItem("token");
+let me = null, today = null, range = "month", custom = null, ranges = {};
+
+function logout() { sessionStorage.removeItem("token"); location.replace("/"); }
+$("logout").addEventListener("click", logout);
+if (!token) logout();
+
+// Builds DOM with text nodes only, so server data is never interpreted as markup.
+function h(tag, props, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props || {})) {
+    if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if (v !== false && v != null) e.setAttribute(k, v === true ? "" : v);
+  }
+  e.append(...kids.flat().filter((x) => x != null && x !== false));
+  return e;
+}
+
+function say(text, err) { const m = $("msg"); m.textContent = text || ""; m.className = "msg" + (err ? " err" : ""); }
+
+async function api(path) {
+  let res;
+  try { res = await fetch(API + path, { headers: { Authorization: "Bearer " + token } }); }
+  catch { throw new Error("Cannot reach the server."); }
+  if (res.status === 401) { logout(); throw new Error("Session expired."); }
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    const d = data && data.detail;
+    throw new Error((Array.isArray(d) ? d.map((x) => x.msg).join("; ") : d) || "Request failed (" + res.status + ")");
+  }
+  return data;
+}
+
+// Dates are "YYYY-MM-DD" strings in the server's time zone; arithmetic is done in UTC to avoid DST/local-zone drift.
+const toDate = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(Date.UTC(y, m - 1, d)); };
+const iso = (d) => d.toISOString().slice(0, 10);
+const addDays = (s, n) => iso(new Date(toDate(s).getTime() + n * 864e5));
+const weekStart = (s) => addDays(s, -((toDate(s).getUTCDay() + 6) % 7));
+const monthStart = (s) => s.slice(0, 8) + "01";
+const prevMonthEnd = (s) => addDays(monthStart(s), -1);
+
+const timeFmt = new Intl.DateTimeFormat([], { timeZone: TZ, hour: "2-digit", minute: "2-digit" });
+const hmFmt = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+const dayFmt = new Intl.DateTimeFormat([], { timeZone: "UTC", weekday: "short", day: "numeric", month: "short", year: "numeric" });
+const parse = (s) => new Date(/(Z|[+-]\d\d:?\d\d)$/.test(s) ? s : s + "Z");
+const fmtTime = (s) => (s ? timeFmt.format(parse(s)) : "-");
+const fmtDay = (s) => dayFmt.format(toDate(s));
+const fmtDur = (m) => (m == null ? "-" : Math.floor(m / 60) + "h " + String(m % 60).padStart(2, "0") + "m");
+const minuteOfDay = (s) => { const [hh, mm] = hmFmt.format(parse(s)).split(":").map(Number); return hh * 60 + mm; };
+
+function defineRanges() {
+  const t = today.work_date, ws = weekStart(t), pm = prevMonthEnd(t);
+  ranges = {
+    today: { label: "Today", from: t, to: t },
+    week: { label: "This week", from: ws, to: t },
+    lastweek: { label: "Last week", from: addDays(ws, -7), to: addDays(ws, -1) },
+    month: { label: "This month", from: monthStart(t), to: t },
+    lastmonth: { label: "Last month", from: monthStart(pm), to: pm },
+    custom: { label: "Custom", from: custom ? custom.from : monthStart(t), to: custom ? custom.to : t },
+  };
+}
+
+function stat(num, lbl, cls) { return h("div", {}, h("div", { class: "num " + (cls || "") }, num), h("div", { class: "lbl" }, lbl)); }
+
+// Hours run from first check-in to last check-out; for a day still checked in, to now.
+function minutesFor(rec, live) {
+  if (!rec || !rec.first_check_in) return null;
+  const start = parse(rec.first_check_in);
+  const end = live ? new Date() : rec.last_check_out ? parse(rec.last_check_out) : null;
+  return end && end > start ? Math.round((end - start) / 6e4) : null;
+}
+
+function renderToday() {
+  const t = today, live = t.is_checked_in;
+  const state = live ? "Checked in" : t.last_check_out ? "Checked out" : "Not checked in";
+  $("todayDate").textContent = fmtDay(t.work_date);
+  $("today").replaceChildren(
+    stat(state, "Status"),
+    stat(fmtTime(t.first_check_in), "First check-in"),
+    stat(live ? "-" : fmtTime(t.last_check_out), "Last check-out"),
+    stat(fmtDur(minutesFor(t, live)), live ? "Hours so far" : "Hours today"),
+  );
+}
+
+function renderTabs() {
+  $("tabs").replaceChildren(...Object.entries(ranges).map(([k, r]) =>
+    h("button", { type: "button", class: k === range ? "on" : "", onclick: () => { range = k; renderTabs(); loadReport(); } }, r.label)));
+  $("custom").classList.toggle("hidden", range !== "custom");
+}
+
+async function loadReport() {
+  const r = ranges[range];
+  const to = r.to > today.work_date ? today.work_date : r.to;
+  if (r.from > to) { $("summary").replaceChildren(); $("days").replaceChildren(h("p", { class: "muted" }, "Nothing to show for this period yet.")); return; }
+  let data;
+  try { data = await api("/attendance/me?date_from=" + r.from + "&date_to=" + to); }
+  catch (e) { return say(e.message, true); }
+  say("");
+  const byDate = new Map(data.items.map((i) => [i.work_date, i]));
+  const rows = [];
+  let present = 0, total = 0, counted = 0, missing = 0, inSum = 0, inN = 0;
+  for (let d = to; d >= r.from; d = addDays(d, -1)) {
+    const rec = byDate.get(d), isToday = d === today.work_date, live = isToday && today.is_checked_in;
+    const dow = toDate(d).getUTCDay();
+    let status = dow === 0 || dow === 6 ? "Weekend" : "No record", cls = "muted", mins = null;
+    if (rec) {
+      present++;
+      mins = minutesFor(rec, live);
+      if (mins != null) { total += mins; counted++; }
+      if (rec.first_check_in) { inSum += minuteOfDay(rec.first_check_in); inN++; }
+      if (live) status = "Checked in";
+      else if (rec.last_check_out) status = "Complete";
+      else { status = "Missing check-out"; cls = "warn"; missing++; }
+      if (status !== "Missing check-out") cls = "";
+    } else if (status === "Weekend") { continue; }
+    rows.push(h("tr", {}, h("td", {}, fmtDay(d)), h("td", {}, rec ? fmtTime(rec.first_check_in) : "-"),
+      h("td", {}, rec && !live ? fmtTime(rec.last_check_out) : "-"), h("td", {}, fmtDur(mins)), h("td", { class: cls }, status)));
+  }
+  const avgIn = inN ? Math.round(inSum / inN) : null;
+  $("summary").replaceChildren(
+    stat(String(present), "Days present"),
+    stat(fmtDur(counted ? total : null), "Total hours"),
+    stat(fmtDur(counted ? Math.round(total / counted) : null), "Average per day"),
+    stat(avgIn == null ? "-" : String(Math.floor(avgIn / 60)).padStart(2, "0") + ":" + String(avgIn % 60).padStart(2, "0"), "Average check-in"),
+    stat(String(missing), "Missing check-outs", missing ? "warn" : ""),
+  );
+  $("days").replaceChildren(rows.length ? h("table", {}, h("thead", {}, h("tr", {},
+    ...["Date", "First check-in", "Last check-out", "Hours", "Status"].map((x) => h("th", {}, x)))), h("tbody", {}, rows))
+    : h("p", { class: "muted" }, "Nothing to show for this period."));
+  $("foot").textContent = "Times are shown in " + TZ + ". Hours run from your first check-in to your last check-out of the day. Weekends are hidden unless you have a record.";
+}
+
+async function loadToday() {
+  today = await api("/attendance/me/today");
+  defineRanges();
+  renderToday();
+}
+
+async function refresh() {
+  try { await loadToday(); renderTabs(); await loadReport(); }
+  catch (e) { say(e.message, true); }
+}
+
+$("custom").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const from = $("c-from").value, to = $("c-to").value;
+  if (from > to) return say("'From' must not be after 'To'.", true);
+  if ((toDate(to) - toDate(from)) / 864e5 > 366) return say("Choose a range of at most 366 days.", true);
+  custom = { from, to }; defineRanges(); loadReport();
+});
+
+(async function init() {
+  try {
+    me = await api("/users/me");
+    if (me.role === "admin") return location.replace("/admin");
+    if (me.role === "system") return location.replace("/kiosk");
+    const bits = [me.full_name, me.department && me.department.name, me.employee_id && "ID " + me.employee_id].filter(Boolean);
+    $("who").textContent = bits.join(" · ");
+    if (!me.face_enrolled) {
+      $("notice").replaceChildren("Face recognition is not set up yet, so you cannot check in at the kiosk. ", h("a", { href: "/?enroll=1" }, "Set it up"));
+    }
+    await refresh();
+    setInterval(() => { if (!document.hidden) refresh(); }, 60000);
+  } catch (e) { say(e.message, true); }
+})();
+</script>
+</body>
+</html>
