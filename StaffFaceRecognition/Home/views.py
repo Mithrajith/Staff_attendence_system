@@ -38,11 +38,45 @@ def get_env_values(request):
     }
     return JsonResponse(env_vars, safe = False)
 
+from functools import wraps
+
+def get_user_role(user):
+    if not user or not user.is_authenticated:
+        return 'anonymous'
+    if user.username.lower() in ['system', 'kiosk'] or user.groups.filter(name='System').exists():
+        return 'system'
+    if user.is_superuser or user.is_staff or user.groups.filter(name='Admin').exists():
+        return 'admin'
+    return 'staff'
+
+def is_admin(user):
+    return get_user_role(user) == 'admin'
+
 def is_superuser(user):
     return user.is_superuser
 
+def admin_required(view_func):
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        role = get_user_role(request.user)
+        if role == 'admin':
+            return view_func(request, *args, **kwargs)
+        elif role == 'system':
+            return redirect('kiosk')
+        else:
+            messages.warning(request, "Access restricted to administrators.")
+            return redirect('my_attendance')
+    return _wrapped_view
+
 @login_required
 def home_view(request):
+    role = get_user_role(request.user)
+    if role == 'system':
+        return redirect('kiosk')
+    elif role == 'staff':
+        return redirect('my_attendance')
     today = date.today()
 
     # Get today's attendance
@@ -109,7 +143,7 @@ def get_attendance(request):
         'attendance': formatted_attendance
     })
 
-@login_required
+@admin_required
 def report_view(request):
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
@@ -148,10 +182,9 @@ def report_view(request):
         'end_date': end_date,
         'department': department
     }
-    for k,v in context.items(): print(k, v)
     return render(request, 'report.html', context)
 
-@login_required
+@admin_required
 def export_report(request):
     try:
         # Get filter parameters
@@ -288,8 +321,7 @@ def process_images_async(temp_dir, images):
 
         return list(executor.map(save_image, images))
 
-@login_required
-@user_passes_test(is_superuser)
+@admin_required
 def manage_employees(request):
     embeddings_file = os.path.join(settings.BASE_DIR, 'backend', 'face_embeddings.json')
     if request.method == 'POST':
@@ -470,8 +502,7 @@ def manage_employees(request):
     }
     return render(request, 'manage_employees.html', context)
 
-@login_required
-@user_passes_test(is_superuser)
+@admin_required
 def employee_detail(request, employee_id):
     """View to display detailed information for a specific employee"""
     try:
@@ -496,8 +527,6 @@ def employee_detail(request, employee_id):
             'MEDIA_URL': settings.MEDIA_URL,  # Add this line
         }
 
-        # print(context)
-        
         return render(request, 'employee_detail.html', context)
         
     except Exception as e:
@@ -508,3 +537,194 @@ def employee_detail(request, employee_id):
 def debug_employee_detail(request, employee_id):
     print(f"Received employee_id: {employee_id}")
     return HttpResponse(f"Debug: Employee ID = {employee_id}")
+
+@login_required
+def kiosk_view(request):
+    """Role 1: Dedicated System Kiosk Terminal for Check In and Check Out only."""
+    role = get_user_role(request.user)
+    if role == 'staff':
+        messages.warning(request, "Staff members can view their personal attendance here.")
+        return redirect('my_attendance')
+    context = {
+        'ip': IP,
+        'user': request.user,
+        'role': role,
+    }
+    return render(request, 'kiosk.html', context)
+
+@admin_required
+def settings_view(request):
+    """Role 2 Admin: System, camera, and recognition configuration."""
+
+    env_path = os.path.join(settings.BASE_DIR, '.env')
+    embeddings_file = os.path.join(settings.BASE_DIR, 'backend', 'face_embeddings.json')
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'resync_embeddings':
+            try:
+                # 1. Train and save embeddings for all media faces
+                store_resp = requests.post("http://127.0.0.1:5600/store_embeddings/", json={
+                    "db_path": settings.MEDIA_ROOT,
+                    "output_file": embeddings_file
+                }, timeout=45)
+                # 2. Reload embeddings in recognition service memory
+                resp = requests.post("http://127.0.0.1:5600/reload-embeddings", timeout=10)
+                if resp.status_code == 200:
+                    messages.success(request, "Face embeddings trained from stored media photos and synchronized with AI engine!")
+                else:
+                    messages.error(request, "Failed to re-sync embeddings with recognition service.")
+            except Exception as e:
+                messages.error(request, f"Error communicating with backend: {e}")
+            return redirect('settings')
+
+        elif action == 'save_settings':
+            new_camera = request.POST.get('camera_index', '2').strip()
+            new_ip = request.POST.get('ip', '127.0.0.1').strip()
+            try:
+                with open(env_path, 'w') as f:
+                    f.write(f"IP='{new_ip}'\nCAMERA_INDEX={new_camera}\n")
+                messages.success(request, "Settings saved successfully.")
+            except Exception as e:
+                messages.error(request, f"Failed to save settings: {e}")
+            return redirect('settings')
+
+    embeddings_count = 0
+    if os.path.exists(embeddings_file):
+        try:
+            with open(embeddings_file, 'r') as f:
+                embs = json.load(f)
+                embeddings_count = len(embs)
+        except Exception:
+            pass
+
+    env_config = dotenv_values(env_path) if os.path.exists(env_path) else {}
+    camera_index = env_config.get('CAMERA_INDEX', '2')
+    current_ip = env_config.get('IP', IP)
+
+    context = {
+        'total_employees': Employee.objects.count(),
+        'total_attendance_records': Attendance.objects.count(),
+        'embeddings_count': embeddings_count,
+        'camera_index': camera_index,
+        'ip': current_ip,
+    }
+    return render(request, 'settings.html', context)
+
+@login_required
+def my_attendance_view(request):
+    """Role 3 Staff: Staff Attendance Portal - personal attendance records only."""
+    role = get_user_role(request.user)
+    if role == 'system':
+        return redirect('kiosk')
+
+    # Find employee associated with logged-in user
+    employee = None
+    if hasattr(request.user, 'employee'):
+        employee = request.user.employee
+    else:
+        employee = Employee.objects.filter(emp_id=request.user.username).first()
+
+    if not employee:
+        if request.user.is_superuser:
+            messages.info(request, "Logged in as Administrator. Showing Admin Dashboard.")
+            return redirect('home')
+        messages.error(request, "No faculty profile linked to your user account. Please contact administrator.")
+        return render(request, 'my_attendance.html', {'employee': None, 'records': []})
+
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+
+    attendance_query = Attendance.objects.filter(emp=employee).order_by('-date')
+    if start_date and end_date:
+        try:
+            attendance_query = attendance_query.filter(date__range=[start_date, end_date])
+        except Exception:
+            pass
+
+    records = []
+    total_hours_sum = 0
+    total_minutes_sum = 0
+
+    for att in attendance_query:
+        in_times = att.get_in_time()
+        out_times = att.get_out_time()
+        in_time_str = in_times[0] if in_times else '--:--'
+        out_time_str = out_times[-1] if out_times else '--:--'
+
+        hours, minutes = att.get_total_working_hours(in_times, out_times)
+        total_hours_sum += hours
+        total_minutes_sum += minutes
+
+        records.append({
+            'date': att.date,
+            'in_time': in_time_str,
+            'out_time': out_time_str,
+            'working_hours': att.get_working_hours(),
+            'is_present': bool(in_times or out_times),
+        })
+
+    total_days = len(records)
+    total_hours_sum += total_minutes_sum // 60
+    remaining_mins = total_minutes_sum % 60
+    avg_minutes_per_day = ((total_hours_sum * 60) + remaining_mins) // total_days if total_days > 0 else 0
+    avg_hours = avg_minutes_per_day // 60
+    avg_mins = avg_minutes_per_day % 60
+
+    # Profile picture check
+    profile_pic = None
+    for ext in ['.jpg', '.jpeg', '.png']:
+        pic_path = os.path.join(settings.MEDIA_ROOT, 'profile_pics', f"{employee.emp_id}{ext}")
+        if os.path.exists(pic_path):
+            profile_pic = f"/media/profile_pics/{employee.emp_id}{ext}"
+            break
+
+    context = {
+        'employee': employee,
+        'profile_pic': profile_pic,
+        'records': records,
+        'total_days': total_days,
+        'total_working_hours': f"{total_hours_sum}h {remaining_mins}m",
+        'avg_daily_hours': f"{avg_hours}h {avg_mins}m",
+        'start_date': start_date or '',
+        'end_date': end_date or '',
+    }
+    return render(request, 'my_attendance.html', context)
+
+@login_required
+def export_my_attendance(request):
+    """Export logged-in staff's personal attendance records to CSV."""
+    employee = getattr(request.user, 'employee', None) or Employee.objects.filter(emp_id=request.user.username).first()
+    if not employee:
+        messages.error(request, "Employee profile not found.")
+        return redirect('my_attendance')
+
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+
+    attendance_query = Attendance.objects.filter(emp=employee).order_by('-date')
+    if start_date and end_date:
+        try:
+            attendance_query = attendance_query.filter(date__range=[start_date, end_date])
+        except Exception:
+            pass
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="attendance_{employee.emp_id}.csv"'
+    writer = csv.writer(response)
+    writer.writerow(['Date', 'Staff ID', 'Staff Name', 'Department', 'First In', 'Last Out', 'Working Hours'])
+
+    for att in attendance_query:
+        in_time = att.get_in_time()[0] if att.get_in_time() else '--:--'
+        out_time = att.get_out_time()[-1] if att.get_out_time() else '--:--'
+        writer.writerow([
+            att.date.strftime('%Y-%m-%d'),
+            employee.emp_id,
+            employee.emp_name,
+            employee.department,
+            in_time,
+            out_time,
+            att.get_working_hours()
+        ])
+
+    return response

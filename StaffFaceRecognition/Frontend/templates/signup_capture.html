@@ -1,0 +1,1025 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Step 2: Biometric Face Capture | Staff Registration</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --primary-dark: #4f46e5;
+            --secondary: #0f172a;
+            --secondary-light: #1e293b;
+            --success: #10b981;
+            --success-dark: #059669;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --gray: #64748b;
+            --gray-light: #cbd5e1;
+            --white: #ffffff;
+            --surface: #ffffff;
+            --surface-2: #f8fafc;
+            --radius-lg: 0.75rem;
+            --radius-xl: 1.25rem;
+            --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.1);
+            --shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.15);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: radial-gradient(circle at top, #1e1b4b 0%, #0f172a 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            color: var(--secondary);
+        }
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background: var(--surface);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-xl);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Top Header */
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+            color: var(--white);
+            padding: 1.5rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .header-title h1 { font-size: 1.35rem; font-weight: 700; }
+        .header-title p { font-size: 0.85rem; opacity: 0.9; margin-top: 0.15rem; }
+        .staff-badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.45rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            backdrop-filter: blur(4px);
+        }
+
+        /* Progress Steps Bar */
+        .step-progress-bar {
+            display: flex;
+            background: #f1f5f9;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 0.75rem 2rem;
+            gap: 1.5rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .progress-step {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            color: var(--gray);
+        }
+        .progress-step.completed { color: var(--success); }
+        .progress-step.active { color: var(--primary); }
+
+        /* ================= SCREEN 1: INSTRUCTIONS ================= */
+        #instructionsScreen {
+            padding: 2.25rem 2rem;
+        }
+        .instructions-hero {
+            text-align: center;
+            max-width: 650px;
+            margin: 0 auto 2rem;
+        }
+        .instructions-hero h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--secondary);
+            margin-bottom: 0.5rem;
+        }
+        .instructions-hero p {
+            font-size: 0.9rem;
+            color: var(--gray);
+            line-height: 1.5;
+        }
+
+        .guide-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+        @media (max-width: 680px) {
+            .guide-grid { grid-template-columns: 1fr; }
+        }
+
+        .guide-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: var(--radius-lg);
+            padding: 1.25rem;
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .guide-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+            border-color: #cbd5e1;
+        }
+        .guide-icon-wrapper {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: #e0e7ff;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 1.4rem;
+        }
+        .guide-card.alt .guide-icon-wrapper { background: #dcfce7; color: var(--success); }
+        .guide-card.warn .guide-icon-wrapper { background: #fef3c7; color: var(--warning); }
+        .guide-card.purple .guide-icon-wrapper { background: #f3e8ff; color: #9333ea; }
+
+        .guide-info h3 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--secondary);
+            margin-bottom: 0.25rem;
+        }
+        .guide-info p {
+            font-size: 0.825rem;
+            color: var(--gray);
+            line-height: 1.45;
+        }
+
+        .notice-banner {
+            background: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            padding: 0.9rem 1.25rem;
+            border-radius: 0.5rem;
+            font-size: 0.85rem;
+            color: #1e40af;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 2rem;
+        }
+
+        .instructions-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 1rem;
+            border-top: 1px solid #e2e8f0;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .btn-back-step1 {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--gray);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 0.75rem 1.25rem;
+            border-radius: var(--radius-lg);
+            border: 1px solid #cbd5e1;
+            transition: all 0.2s;
+        }
+        .btn-back-step1:hover {
+            background: #f1f5f9;
+            color: var(--secondary);
+        }
+        .btn-proceed-capture {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: linear-gradient(135deg, #4f46e5, #6366f1);
+            color: white;
+            border: none;
+            padding: 0.85rem 1.75rem;
+            border-radius: var(--radius-lg);
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.35);
+            transition: all 0.2s;
+        }
+        .btn-proceed-capture:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(99, 102, 241, 0.45);
+        }
+
+        /* ================= SCREEN 2: CAMERA CAPTURE ================= */
+        #captureScreen {
+            display: none;
+            padding: 1.75rem 2rem;
+        }
+
+        /* Camera Management Bar (Top of Screen 2) */
+        .camera-mgmt-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: var(--radius-lg);
+            padding: 0.75rem 1rem;
+            margin-bottom: 1.25rem;
+        }
+        .camera-select-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+            min-width: 260px;
+        }
+        .camera-select-group label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #475569;
+            white-space: nowrap;
+        }
+        .camera-dropdown {
+            flex: 1;
+            padding: 0.45rem 0.75rem;
+            border-radius: 0.5rem;
+            border: 1px solid #cbd5e1;
+            font-size: 0.85rem;
+            background: white;
+            color: var(--secondary);
+            outline: none;
+            cursor: pointer;
+        }
+        .camera-dropdown:focus { border-color: var(--primary); }
+
+        .btn-flip-cam, .btn-review-instructions {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.45rem 0.85rem;
+            background: white;
+            border: 1px solid #cbd5e1;
+            border-radius: 0.5rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #475569;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-flip-cam:hover, .btn-review-instructions:hover {
+            background: #e2e8f0;
+            color: var(--secondary);
+        }
+
+        /* Video Feed & Guide */
+        .capture-stage {
+            display: grid;
+            grid-template-columns: 1.15fr 1fr;
+            gap: 1.5rem;
+            align-items: start;
+        }
+        @media (max-width: 768px) {
+            .capture-stage { grid-template-columns: 1fr; }
+        }
+
+        .video-wrapper {
+            width: 100%;
+            aspect-ratio: 4/3;
+            background: #000;
+            border-radius: var(--radius-lg);
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+            border: 3px solid #e2e8f0;
+        }
+        #webcam {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1); /* mirror view for user */
+        }
+        .face-target-guide {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 190px;
+            height: 240px;
+            border: 2px dashed rgba(255, 255, 255, 0.75);
+            border-radius: 50% 50% 45% 45%;
+            pointer-events: none;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.25);
+            transition: all 0.3s ease;
+        }
+        .face-target-guide.ready {
+            border-color: var(--success);
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.15), 0 0 15px rgba(16, 185, 129, 0.5);
+        }
+        .countdown-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 4.5rem;
+            font-weight: 800;
+            color: var(--white);
+            text-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
+            display: none;
+            pointer-events: none;
+        }
+        .flash-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: white;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.15s ease-out;
+        }
+        .flash-overlay.active { opacity: 0.85; }
+
+        /* Capture Controls */
+        .controls-row {
+            display: flex;
+            gap: 0.6rem;
+            margin-top: 0.75rem;
+        }
+        .btn-capture-auto {
+            flex: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.85rem 1rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-lg);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-capture-auto:hover { background: var(--primary-dark); }
+        .btn-capture-single, .btn-reset-captures {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.85rem 1.1rem;
+            background: #e2e8f0;
+            color: #475569;
+            border: none;
+            border-radius: var(--radius-lg);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .btn-capture-single:hover, .btn-reset-captures:hover {
+            background: #cbd5e1;
+            color: var(--secondary);
+        }
+
+        /* Thumbnails Column */
+        .thumbs-section {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .thumbs-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #334155;
+        }
+        .counter-badge {
+            background: #e0e7ff;
+            color: var(--primary);
+            padding: 0.25rem 0.65rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+        .thumbs-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 0.5rem;
+        }
+        .thumb-slot {
+            aspect-ratio: 1;
+            background: #f1f5f9;
+            border-radius: 0.5rem;
+            border: 2px dashed #cbd5e1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #94a3b8;
+        }
+        .thumb-slot img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+        .thumb-slot.captured {
+            border-color: var(--success);
+            border-style: solid;
+        }
+        .thumb-check {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            background: var(--success);
+            color: white;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+        }
+
+        .btn-complete-signup {
+            width: 100%;
+            margin-top: 0.75rem;
+            padding: 0.95rem;
+            background: var(--success);
+            color: white;
+            border: none;
+            border-radius: var(--radius-lg);
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.25);
+        }
+        .btn-complete-signup:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        .btn-complete-signup:not(:disabled):hover {
+            background: var(--success-dark);
+            transform: translateY(-1px);
+        }
+
+        /* Remote Device Notice / Fallback */
+        .remote-help-box {
+            margin-top: 1rem;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: var(--radius-lg);
+            padding: 0.75rem 1rem;
+            font-size: 0.78rem;
+            color: #64748b;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            line-height: 1.4;
+        }
+
+        /* Status Toast */
+        .status-box {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius-lg);
+            font-size: 0.85rem;
+            margin-top: 0.75rem;
+            display: none;
+            text-align: center;
+        }
+        .status-box.error { background: #fee2e2; color: #991b1b; display: block; }
+        .status-box.info { background: #e0e7ff; color: #3730a3; display: block; }
+        .status-box.loading { background: #fef3c7; color: #92400e; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(0, 0, 0, 0.1);
+            border-top-color: currentColor;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-title">
+                <h1>Step 2: Biometric Face Capture</h1>
+                <p>Register your face data for seamless automated attendance tracking</p>
+            </div>
+            <div class="staff-badge">
+                <span class="material-icons-round" style="font-size: 1rem;">badge</span>
+                <span>{{ staff_id }} &bull; {{ staff_name }} ({{ department }})</span>
+            </div>
+        </header>
+
+        <!-- Progress Steps -->
+        <div class="step-progress-bar">
+            <div class="progress-step completed">
+                <span class="material-icons-round" style="font-size: 1rem;">check_circle</span>
+                <span>1. Account Details</span>
+            </div>
+            <div class="progress-step active" id="step2Label">
+                <span class="material-icons-round" style="font-size: 1rem;">menu_book</span>
+                <span>2. Guidelines & Instructions</span>
+            </div>
+            <div class="progress-step" id="step3Label">
+                <span class="material-icons-round" style="font-size: 1rem;">photo_camera</span>
+                <span>3. 10 Face Photos Capture</span>
+            </div>
+        </div>
+
+        <!-- ================= SCREEN 1: INSTRUCTIONS PAGE ================= -->
+        <div id="instructionsScreen">
+            <div class="instructions-hero">
+                <h2>Before You Open the Camera</h2>
+                <p>Please review these quick guidelines to ensure your face biometric profile is captured with maximum recognition accuracy across all attendance terminals.</p>
+            </div>
+
+            <div class="guide-grid">
+                <div class="guide-card">
+                    <div class="guide-icon-wrapper">
+                        <span class="material-icons-round">wb_sunny</span>
+                    </div>
+                    <div class="guide-info">
+                        <h3>1. Proper Lighting</h3>
+                        <p>Face a soft, even light source. Avoid bright windows, sunlight, or strong lamps directly behind you that cast dark shadows.</p>
+                    </div>
+                </div>
+
+                <div class="guide-card alt">
+                    <div class="guide-icon-wrapper">
+                        <span class="material-icons-round">center_focus_strong</span>
+                    </div>
+                    <div class="guide-info">
+                        <h3>2. Centered & Eye Level</h3>
+                        <p>Position your device camera at eye level. Center your face inside the dashed oval frame guide that will appear on screen.</p>
+                    </div>
+                </div>
+
+                <div class="guide-card warn">
+                    <div class="guide-icon-wrapper">
+                        <span class="material-icons-round">visibility</span>
+                    </div>
+                    <div class="guide-info">
+                        <h3>3. Clear Facial Visibility</h3>
+                        <p>Remove face masks, dark sunglasses, or large caps. Prescription glasses are allowed if your eyes and eyebrows remain visible.</p>
+                    </div>
+                </div>
+
+                <div class="guide-card purple">
+                    <div class="guide-icon-wrapper">
+                        <span class="material-icons-round">burst_mode</span>
+                    </div>
+                    <div class="guide-info">
+                        <h3>4. 10 Multi-Angle Photos</h3>
+                        <p>The system captures 10 rapid photos. Maintain a natural expression, and slightly tilt your head (straight, slight left, slight right, slight up) across shots.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="notice-banner">
+                <span class="material-icons-round" style="font-size: 1.25rem;">devices</span>
+                <div>
+                    <strong>Cross-Device Friendly:</strong> You can complete this registration on any computer, laptop, tablet, or phone camera connected to the server.
+                </div>
+            </div>
+
+            <div class="instructions-actions">
+                <a href="{% url 'signup' %}" class="btn-back-step1">
+                    <span class="material-icons-round" style="font-size: 1.1rem;">arrow_back</span>
+                    <span>Edit Account Details</span>
+                </a>
+                <button type="button" class="btn-proceed-capture" onclick="showCaptureScreen()">
+                    <span>I'm Ready &bull; Proceed to Camera Capture</span>
+                    <span class="material-icons-round" style="font-size: 1.1rem;">arrow_forward</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- ================= SCREEN 2: CAMERA CAPTURE PAGE ================= -->
+        <div id="captureScreen">
+            <!-- Camera Device Management Bar -->
+            <div class="camera-mgmt-bar">
+                <div class="camera-select-group">
+                    <span class="material-icons-round" style="color: var(--primary);">videocam</span>
+                    <label for="cameraSelect">Camera Source:</label>
+                    <select id="cameraSelect" class="camera-dropdown" onchange="switchCamera(this.value)">
+                        <option value="">Default Camera</option>
+                    </select>
+                </div>
+
+                <div style="display: flex; gap: 0.5rem;">
+                    <button type="button" class="btn-flip-cam" id="flipCamBtn" onclick="toggleFacingMode()" title="Flip between front and rear camera on mobile devices">
+                        <span class="material-icons-round" style="font-size: 1rem;">flip_camera_ios</span>
+                        <span>Flip Camera</span>
+                    </button>
+                    <button type="button" class="btn-review-instructions" onclick="showInstructionsScreen()">
+                        <span class="material-icons-round" style="font-size: 1rem;">help_outline</span>
+                        <span>Review Guidelines</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Capture Stage -->
+            <div class="capture-stage">
+                <!-- Video Feed Column -->
+                <div>
+                    <div class="video-wrapper">
+                        <video id="webcam" autoplay playsinline muted></video>
+                        <div class="face-target-guide" id="guide"></div>
+                        <div class="countdown-overlay" id="countdown">3</div>
+                        <div class="flash-overlay" id="flash"></div>
+                    </div>
+
+                    <!-- Hidden Canvas -->
+                    <canvas id="captureCanvas" style="display: none;"></canvas>
+
+                    <!-- Capture Buttons -->
+                    <div class="controls-row">
+                        <button type="button" class="btn-capture-auto" id="autoCaptureBtn">
+                            <span class="material-icons-round">play_circle</span>
+                            <span>Auto-Capture 10 Photos</span>
+                        </button>
+                        <button type="button" class="btn-capture-single" id="snapBtn" title="Take a single snapshot">
+                            <span class="material-icons-round">photo_camera</span>
+                        </button>
+                        <button type="button" class="btn-reset-captures" id="resetBtn" title="Clear and retake photos">
+                            <span class="material-icons-round">refresh</span>
+                        </button>
+                    </div>
+
+                    <div class="remote-help-box">
+                        <span class="material-icons-round" style="font-size: 1.1rem; color: #3b82f6;">info</span>
+                        <span>If accessing from another computer/phone on HTTP LAN and your browser blocks the camera, allow camera in site settings or add the server IP to Chrome's insecure origins flag.</span>
+                    </div>
+                </div>
+
+                <!-- Thumbnails & Submit Column -->
+                <div class="thumbs-section">
+                    <div class="thumbs-header">
+                        <span>Captured Photo Samples</span>
+                        <span class="counter-badge" id="counterText">0 / 10 Completed</span>
+                    </div>
+
+                    <div class="thumbs-grid" id="thumbsGrid">
+                        {% for i in "1234567890" %}
+                        <div class="thumb-slot" id="slot-{{ forloop.counter0 }}">
+                            <span>#{{ forloop.counter }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <button type="button" class="btn-complete-signup" id="completeBtn" disabled>
+                        <span class="material-icons-round">verified</span>
+                        <span>Complete Registration & Save Face ID</span>
+                    </button>
+
+                    <div id="statusBox" class="status-box"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const TOTAL_IMAGES = 10;
+        let capturedImages = [];
+        let isCapturing = false;
+        let currentStream = null;
+        let currentFacingMode = 'user';
+        let selectedDeviceId = null;
+
+        // Elements
+        const instructionsScreen = document.getElementById('instructionsScreen');
+        const captureScreen = document.getElementById('captureScreen');
+        const step2Label = document.getElementById('step2Label');
+        const step3Label = document.getElementById('step3Label');
+
+        const video = document.getElementById('webcam');
+        const canvas = document.getElementById('captureCanvas');
+        const guide = document.getElementById('guide');
+        const countdownEl = document.getElementById('countdown');
+        const flashEl = document.getElementById('flash');
+        const counterText = document.getElementById('counterText');
+        const autoCaptureBtn = document.getElementById('autoCaptureBtn');
+        const snapBtn = document.getElementById('snapBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const completeBtn = document.getElementById('completeBtn');
+        const statusBox = document.getElementById('statusBox');
+        const cameraSelect = document.getElementById('cameraSelect');
+
+        // Switch Screens
+        function showCaptureScreen() {
+            instructionsScreen.style.display = 'none';
+            captureScreen.style.display = 'block';
+            step2Label.className = 'progress-step completed';
+            step3Label.className = 'progress-step active';
+            startCamera();
+        }
+
+        function showInstructionsScreen() {
+            captureScreen.style.display = 'none';
+            instructionsScreen.style.display = 'block';
+            step2Label.className = 'progress-step active';
+            step3Label.className = 'progress-step';
+            stopCamera();
+        }
+
+        // Camera Management (Works on other devices / computers / phones)
+        async function getAvailableCameras() {
+            try {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+                    return;
+                }
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(d => d.kind === 'videoinput');
+
+                cameraSelect.innerHTML = '';
+                if (videoDevices.length === 0) {
+                    const opt = document.createElement('option');
+                    opt.value = '';
+                    opt.textContent = 'Default Device Camera';
+                    cameraSelect.appendChild(opt);
+                    return;
+                }
+
+                videoDevices.forEach((dev, idx) => {
+                    const opt = document.createElement('option');
+                    opt.value = dev.deviceId;
+                    opt.textContent = dev.label || `Camera ${idx + 1} (${dev.deviceId.slice(0, 5)}...)`;
+                    if (selectedDeviceId && dev.deviceId === selectedDeviceId) {
+                        opt.selected = true;
+                    }
+                    cameraSelect.appendChild(opt);
+                });
+            } catch (err) {
+                console.warn("Error enumerating cameras:", err);
+            }
+        }
+
+        async function startCamera() {
+            stopCamera();
+
+            const constraints = {
+                audio: false,
+                video: {
+                    width: { ideal: 640 },
+                    height: { ideal: 480 }
+                }
+            };
+
+            if (selectedDeviceId) {
+                constraints.video.deviceId = { exact: selectedDeviceId };
+            } else {
+                constraints.video.facingMode = currentFacingMode;
+            }
+
+            try {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    throw new Error("Camera API not supported or blocked by browser security policy (requires HTTPS or localhost).");
+                }
+
+                currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = currentStream;
+                guide.classList.add('ready');
+
+                // Enumerate devices once permission has been granted
+                await getAvailableCameras();
+            } catch (err) {
+                console.error("Camera access error:", err);
+                showStatus(`Camera access failed: ${err.message}. If accessing from another device over HTTP, allow camera access in site settings or Chrome flags.`, 'error');
+            }
+        }
+
+        function stopCamera() {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+                currentStream = null;
+            }
+            if (video) video.srcObject = null;
+        }
+
+        function switchCamera(deviceId) {
+            selectedDeviceId = deviceId || null;
+            startCamera();
+        }
+
+        function toggleFacingMode() {
+            currentFacingMode = (currentFacingMode === 'user') ? 'environment' : 'user';
+            selectedDeviceId = null;
+            startCamera();
+        }
+
+        // Photo Capture
+        function takeSnapshot() {
+            if (!currentStream || video.videoWidth === 0) {
+                showStatus('Camera is not active yet. Please wait for camera feed.', 'error');
+                return null;
+            }
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            return canvas.toDataURL('image/jpeg', 0.92);
+        }
+
+        function triggerFlash() {
+            flashEl.classList.add('active');
+            setTimeout(() => flashEl.classList.remove('active'), 150);
+        }
+
+        function updateSlot(index, dataUrl) {
+            const slot = document.getElementById(`slot-${index}`);
+            if (!slot) return;
+            slot.classList.add('captured');
+            slot.innerHTML = `
+                <img src="${dataUrl}" alt="Photo ${index + 1}" />
+                <div class="thumb-check"><span class="material-icons-round" style="font-size: 11px;">check</span></div>
+            `;
+        }
+
+        function updateProgress() {
+            const count = capturedImages.length;
+            counterText.textContent = `${count} / ${TOTAL_IMAGES} Completed`;
+            if (count >= TOTAL_IMAGES) {
+                counterText.style.background = '#dcfce7';
+                counterText.style.color = '#15803d';
+                completeBtn.disabled = false;
+                showStatus('All 10 photos captured successfully! Click Complete Registration below.', 'info');
+            } else {
+                completeBtn.disabled = true;
+            }
+        }
+
+        // Manual Snap
+        snapBtn.addEventListener('click', () => {
+            if (isCapturing) return;
+            if (capturedImages.length >= TOTAL_IMAGES) {
+                showStatus('All 10 photos are already captured. Click Complete Registration or Reset.', 'info');
+                return;
+            }
+
+            triggerFlash();
+            const dataUrl = takeSnapshot();
+            if (dataUrl) {
+                const idx = capturedImages.length;
+                capturedImages.push(dataUrl);
+                updateSlot(idx, dataUrl);
+                updateProgress();
+            }
+        });
+
+        // Auto Burst Capture
+        autoCaptureBtn.addEventListener('click', async () => {
+            if (isCapturing) return;
+            if (capturedImages.length >= TOTAL_IMAGES) {
+                resetCaptures();
+            }
+
+            isCapturing = true;
+            autoCaptureBtn.disabled = true;
+            snapBtn.disabled = true;
+
+            // 3-2-1 Countdown
+            countdownEl.style.display = 'block';
+            for (let c = 3; c > 0; c--) {
+                countdownEl.textContent = c;
+                await new Promise(r => setTimeout(r, 800));
+            }
+            countdownEl.style.display = 'none';
+
+            // Capture missing photos up to 10
+            while (capturedImages.length < TOTAL_IMAGES) {
+                triggerFlash();
+                const dataUrl = takeSnapshot();
+                if (dataUrl) {
+                    const idx = capturedImages.length;
+                    capturedImages.push(dataUrl);
+                    updateSlot(idx, dataUrl);
+                    updateProgress();
+                }
+                await new Promise(r => setTimeout(r, 650));
+            }
+
+            isCapturing = false;
+            autoCaptureBtn.disabled = false;
+            snapBtn.disabled = false;
+        });
+
+        // Reset
+        function resetCaptures() {
+            capturedImages = [];
+            for (let i = 0; i < TOTAL_IMAGES; i++) {
+                const slot = document.getElementById(`slot-${i}`);
+                if (slot) {
+                    slot.classList.remove('captured');
+                    slot.innerHTML = `<span>#${i + 1}</span>`;
+                }
+            }
+            updateProgress();
+            statusBox.style.display = 'none';
+        }
+        resetBtn.addEventListener('click', resetCaptures);
+
+        function showStatus(msg, type = 'info') {
+            statusBox.className = `status-box ${type}`;
+            if (type === 'loading') {
+                statusBox.innerHTML = `<div class="spinner"></div><span>${msg}</span>`;
+            } else {
+                statusBox.textContent = msg;
+            }
+            statusBox.style.display = type === 'loading' ? 'flex' : 'block';
+        }
+
+        // Final Submission to Backend
+        completeBtn.addEventListener('click', async () => {
+            if (capturedImages.length < TOTAL_IMAGES) {
+                showStatus(`Please capture all 10 face photos (${capturedImages.length}/10 captured).`, 'error');
+                return;
+            }
+
+            completeBtn.disabled = true;
+            autoCaptureBtn.disabled = true;
+            snapBtn.disabled = true;
+            resetBtn.disabled = true;
+            showStatus('Extracting and storing face photos in media. Creating staff account...', 'loading');
+
+            try {
+                const response = await fetch("{% url 'signup_complete' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ images: capturedImages })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.status === 'success') {
+                    showStatus('Face photos stored successfully! Redirecting to Staff Attendance Portal...', 'info');
+                    stopCamera();
+                    setTimeout(() => {
+                        window.location.href = data.redirect_url || "{% url 'my_attendance' %}";
+                    }, 1200);
+                } else {
+                    showStatus(data.message || 'Face enrollment failed. Please ensure face is clearly visible.', 'error');
+                    completeBtn.disabled = false;
+                    autoCaptureBtn.disabled = false;
+                    snapBtn.disabled = false;
+                    resetBtn.disabled = false;
+                }
+            } catch (err) {
+                console.error("Submission error:", err);
+                showStatus(`Connection error: ${err.message}. Check server status and retry.`, 'error');
+                completeBtn.disabled = false;
+                autoCaptureBtn.disabled = false;
+                snapBtn.disabled = false;
+                resetBtn.disabled = false;
+            }
+        });
+
+        // Clean up camera on leave
+        window.addEventListener('beforeunload', stopCamera);
+    </script>
+</body>
+</html>

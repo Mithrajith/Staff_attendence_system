@@ -988,6 +988,107 @@
         
         .overflow-hidden { overflow: hidden; }
         .position-relative { position: relative; }
+
+        /* Unified Modern Brand & Navbar Styling */
+        .sidebar-header .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+        }
+        .logo-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.35);
+            flex-shrink: 0;
+        }
+        .logo-text {
+            display: flex;
+            flex-direction: column;
+        }
+        .brand-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--secondary);
+            line-height: 1.2;
+        }
+        .brand-sub {
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: var(--primary);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .btn-logout-nav {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.4rem 0.85rem;
+            border-radius: 9999px;
+            background: rgba(239, 68, 68, 0.08);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+        .btn-logout-nav:hover {
+            background: #ef4444;
+            color: white;
+            border-color: #ef4444;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+        }
+
+        /* Modernized Component Norms */
+        .card {
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 1rem !important;
+            box-shadow: 0 2px 4px rgba(15, 23, 42, 0.03), 0 1px 2px rgba(15, 23, 42, 0.02) !important;
+        }
+        .card-header {
+            background: #ffffff !important;
+            border-bottom: 1px solid #f1f5f9 !important;
+            padding: 1.1rem 1.5rem !important;
+        }
+        .form-control, .form-select {
+            border-radius: 0.6rem !important;
+            border: 1px solid #cbd5e1 !important;
+            padding: 0.55rem 0.85rem !important;
+            font-size: 0.9rem !important;
+            transition: all 0.2s ease !important;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary) !important;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+        }
+        .table thead th {
+            background-color: #f8fafc !important;
+            color: #64748b !important;
+            font-size: 0.75rem !important;
+            font-weight: 700 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.6px !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+            padding: 0.85rem 1.25rem !important;
+        }
+        .table tbody td {
+            padding: 0.95rem 1.25rem !important;
+            vertical-align: middle !important;
+            border-bottom: 1px solid #f1f5f9 !important;
+            color: #334155 !important;
+        }
+        .table tbody tr:hover {
+            background-color: rgba(99, 102, 241, 0.03) !important;
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -997,36 +1098,58 @@
         <aside class="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
-                    <i class="material-icons-round">face</i>
-                    <span>Face Recognition</span>
+                    <span class="logo-icon"><i class="material-icons-round">face</i></span>
+                    <div class="logo-text">
+                        <span class="brand-title">FaceAttend</span>
+                        <span class="brand-sub">Biometric AI</span>
+                    </div>
                 </div>
             </div>
             <div class="sidebar-toggle" id="sidebarToggle">
                 <i class="material-icons-round">chevron_left</i>
             </div>
             <div class="sidebar-menu">
-                <span class="menu-title">Navigation</span>
+                <span class="menu-title">{% if user.is_superuser or user.is_staff %}Admin Menu{% else %}Staff Menu{% endif %}</span>
                 <ul>
+                    {% if user.is_superuser or user.is_staff %}
                     <li>
-                        <a href="{% url 'home' %}" class="{% if request.path == '/' %}active{% endif %}">
-                            <i class="material-icons-round">home</i>
+                        <a href="{% url 'home' %}" class="{% if request.path == '/' or request.path == '/dashboard/' %}active{% endif %}">
+                            <i class="material-icons-round">dashboard</i>
                             <span class="menu-text">Dashboard</span>
                         </a>
                     </li>
                     <li>
-                        <a href="{% url 'report' %}" class="{% if 'report' in request.path %}active{% endif %}">
-                            <i class="material-icons-round">assessment</i>
-                            <span class="menu-text">Reports</span>
+                        <a href="{% url 'manage_employees' %}" class="{% if 'manage_employees' in request.path or 'employee' in request.path %}active{% endif %}">
+                            <i class="material-icons-round">people</i>
+                            <span class="menu-text">Manage Faculty</span>
                         </a>
                     </li>
-                    {% if user.is_superuser %}
                     <li>
-                        <a href="{% url 'manage_employees' %}" class="{% if 'manage_employees' in request.path %}active{% endif %}">
-                            <i class="material-icons-round">groups</i>
-                            <span class="menu-text">Manage Employees</span>
+                        <a href="{% url 'report' %}" class="{% if 'report' in request.path and 'my-attendance' not in request.path %}active{% endif %}">
+                            <i class="material-icons-round">assessment</i>
+                            <span class="menu-text">Attendance Report</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'settings' %}" class="{% if 'settings' in request.path %}active{% endif %}">
+                            <i class="material-icons-round">settings</i>
+                            <span class="menu-text">Settings</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li>
+                        <a href="{% url 'my_attendance' %}" class="{% if 'my-attendance' in request.path %}active{% endif %}">
+                            <i class="material-icons-round">event_note</i>
+                            <span class="menu-text">My Attendance</span>
                         </a>
                     </li>
                     {% endif %}
+                    <li>
+                        <a href="{% url 'kiosk' %}" target="_blank">
+                            <i class="material-icons-round">camera</i>
+                            <span class="menu-text">Kiosk Terminal ↗</span>
+                        </a>
+                    </li>
                     <li>
                         <a href="{% url 'logout' %}">
                             <i class="material-icons-round">logout</i>
@@ -1048,20 +1171,24 @@
                     <h4 class="page-title mb-0">{% block page_title %}Dashboard{% endblock %}</h4>
                 </div>
                 <div class="navbar-right">
-                    <div class="navbar-item">
+                    <div class="d-flex align-items-center gap-3">
                         <div class="navbar-user">
                             <div class="user-avatar">
-                                {% if user.get_avatar %}
-                                <img src="{{ user.get_avatar }}" alt="{{ user.username }}">
+                                {% if user.employee and user.employee.emp_id %}
+                                <img src="/media/profile_pics/{{ user.employee.emp_id }}.jpg" alt="{{ user.username }}" onerror="this.onerror=null; this.parentElement.innerHTML='{{ user.username.0|upper }}';">
                                 {% else %}
                                 {{ user.username.0|upper }}
                                 {% endif %}
                             </div>
                             <div class="user-info">
-                                <p class="user-name">{{ user.username }}</p>
-                                <p class="user-role">{% if user.is_superuser %}Admin{% else %}Staff{% endif %}</p>
+                                <p class="user-name mb-0">{{ user.first_name|default:user.username }}</p>
+                                <p class="user-role mb-0">{% if user.is_superuser or user.is_staff %}Administrator{% else %}Faculty Staff{% endif %}</p>
                             </div>
                         </div>
+                        <a href="{% url 'logout' %}" class="btn-logout-nav" title="Log out">
+                            <i class="material-icons-round" style="font-size: 1rem;">logout</i>
+                            <span class="d-none d-sm-inline">Logout</span>
+                        </a>
                     </div>
                 </div>
             </div>

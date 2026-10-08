@@ -221,7 +221,7 @@ latest_detection_times = {}
 
 def reset_camera():
     """Force reset the Jetson camera pipeline to fix stream issues."""
-    os.system("sudo systemctl restart nvargus-daemon")
+    os.system("systemctl restart nvargus-daemon")
     time.sleep(2)  # Give time for the daemon to restart
 
 checked_status = None

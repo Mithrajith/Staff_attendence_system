@@ -4,17 +4,19 @@ import queue
 import torch
 import json
 import os
+import shutil
 import time
 import threading
 from facenet_pytorch import MTCNN, InceptionResnetV1
 from PIL import Image
 import base64
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
 import numpy as np
 from fastapi.middleware.cors import CORSMiddleware
 import sqlite3
 from datetime import datetime
+from typing import Optional, List
 from pydantic import BaseModel
 from collections import defaultdict, deque
 import uvicorn
@@ -104,9 +106,20 @@ class RateLimiter:
 
 attendance_limiter = RateLimiter(60)  # 60 second interval
 
+def get_safe_torch_device():
+    if torch.cuda.is_available():
+        try:
+            t = torch.zeros(1, device='cuda')
+            _ = t + 1
+            return torch.device('cuda:0')
+        except Exception as e:
+            logger.warning(f"CUDA device present but kernel incompatible ({e}). Using CPU.")
+            return torch.device('cpu')
+    return torch.device('cpu')
+
 class FaceDetect:
     def __init__(self, db_file="face_embeddings.json"):
-        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        self.device = get_safe_torch_device()
         print(f'Running on device: {self.device}')
 
         # Initialize models with improved parameters
@@ -427,74 +440,119 @@ async def process_frame_wrapper(frame):
     except Exception as e:
         logger.error(f"Error in process_frame: {e}")
 
-def reset_camera():
-    """Force reset the Jetson camera pipeline to fix stream issues."""
-    os.system("sudo systemctl restart nvargus-daemon")
-    time.sleep(2)  # Give time for the daemon to restart
-    logger.info("Camera reset completed.")
+def is_video_capture_node(idx):
+    """Check if /dev/video{idx} is a true video capture node, skipping metadata nodes."""
+    try:
+        import subprocess
+        res = subprocess.run(['v4l2-ctl', '-d', f'/dev/video{idx}', '-D'], 
+                             capture_output=True, text=True, timeout=1)
+        caps_section = res.stdout.split('Device Caps')[-1] if 'Device Caps' in res.stdout else res.stdout
+        return 'Video Capture' in caps_section
+    except Exception:
+        return True
+
+def open_camera():
+    """Open external webcam or fallback to any available camera device."""
+    candidate_indices = []
+    
+    # 1. Environment variable override
+    env_camera = os.getenv("CAMERA_INDEX")
+    if env_camera is not None and env_camera.isdigit():
+        candidate_indices.append(int(env_camera))
+    
+    # 2. Dynamic discovery of /dev/video* devices (Linux)
+    try:
+        import glob
+        import re
+        dev_nodes = glob.glob("/dev/video*")
+        dev_indices = []
+        for node in dev_nodes:
+            m = re.search(r"/dev/video(\d+)$", node)
+            if m:
+                idx = int(m.group(1))
+                if is_video_capture_node(idx):
+                    dev_indices.append(idx)
+        dev_indices.sort()
+        for idx in dev_indices:
+            if idx not in candidate_indices:
+                candidate_indices.append(idx)
+    except Exception as e:
+        logger.warning(f"Error scanning /dev/video* devices: {e}")
+
+    for idx in [2, 0, 4]:
+        if idx not in candidate_indices:
+            candidate_indices.append(idx)
+
+    for idx in candidate_indices:
+        for api_pref in [cv2.CAP_V4L2, cv2.CAP_ANY]:
+            try:
+                cap = cv2.VideoCapture(idx, api_pref)
+                if cap.isOpened():
+                    for fourcc_str in ['MJPG', 'YUYV', None]:
+                        if fourcc_str:
+                            cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*fourcc_str))
+                        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                        ret, _ = cap.read()
+                        if ret:
+                            logger.info(f"Successfully opened camera at index {idx} (/dev/video{idx})")
+                            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                            cap.set(cv2.CAP_PROP_FPS, 30)
+                            return cap, idx
+                    cap.release()
+            except Exception:
+                pass
+            
+    return None, None
 
 def video_capture():
-    """Continuously capture and process video frames."""
-    global latest_frame, latest_detected_ids, latest_detection_times
+    """Continuously capture video frames for live streaming."""
+    global latest_frame
 
-    # Create event loop for this thread
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
-    # pipeline = (
-    #     "nvarguscamerasrc sensor-id=0 sensor-mode=3 ! "
-    #     "video/x-raw(memory:NVMM), width=1920, height=1080, format=NV12, framerate=30/1 ! "
-    #     "nvvidconv ! video/x-raw, format=BGRx ! "
-    #     "videoconvert ! video/x-raw, format=BGR ! "
-    #     "appsink drop=1"
-    # )
-
-    # Use either GSTREAMER or fallback to regular webcam
-    try:
-        # cap = cv2.VideoCapture(pipeline, cv2.CAP_GSTREAMER)
-        cap = cv2.VideoCapture(0)
-        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-        cap.set(cv2.CAP_PROP_FPS, 30)
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-    except:
-        logger.warning("Gstreamer pipeline failed, falling back to regular webcam")
-        cap = cv2.VideoCapture(0)
-
-    if not cap.isOpened():
-        logger.error("Could not open camera. Exiting.")
-        return
+    cap, current_camera_idx = open_camera()
+    consecutive_failures = 0
+    logged_no_camera = False
 
     try:
         while True:
             try:
-                ret, frame = cap.read()
-                if not ret:
-                    logger.warning("Failed to grab frame, attempting reset.")
-                    reset_camera()
-                    cap.release()
-                    time.sleep(2)
-                    # cap = cv2.VideoCapture(pipeline, cv2.CAP_GSTREAMER)
-                    cap = cv2.VideoCapture(0)
+                if cap is None:
+                    if not logged_no_camera:
+                        logger.warning("No backend hardware camera currently accessible. Browser direct webcam can still be used.")
+                        logged_no_camera = True
+                    time.sleep(5)
+                    cap, current_camera_idx = open_camera()
+                    if cap is not None:
+                        logged_no_camera = False
                     continue
 
-                # Use the event loop to run async functions
-                loop.run_until_complete(process_frame_wrapper(frame))
+                ret, frame = cap.read()
+                if not ret or frame is None:
+                    consecutive_failures += 1
+                    if consecutive_failures > 15:
+                        try:
+                            cap.release()
+                        except Exception:
+                            pass
+                        cap = None
+                        consecutive_failures = 0
+                        time.sleep(3)
+                    else:
+                        time.sleep(0.04)
+                    continue
+
+                consecutive_failures = 0
+                latest_frame = frame
+                time.sleep(0.02)
 
             except Exception as e:
-                logger.error(f"Error processing frame: {str(e)}")
-                time.sleep(1)
+                time.sleep(1.0)
 
     except KeyboardInterrupt:
         logger.info("Stopping video capture...")
-    except Exception as e:
-        logger.error(f"Fatal error during capture: {str(e)}")
     finally:
         if 'cap' in locals() and cap is not None:
             cap.release()
-            cv2.destroyAllWindows()
-        loop.close()
-        logger.info("Camera resources released.")
 
 @app.get('/video_stream')
 async def video_stream():
@@ -688,45 +746,71 @@ def store_embeddings(db_path, output_file):
         return {"error": "Dataset path does not exist"}
 
     existing_embeddings = {}
-    if (os.path.exists(output_file)):
-        with open(output_file, 'r') as f:
-            existing_embeddings = json.load(f)
+    if os.path.exists(output_file):
+        try:
+            with open(output_file, 'r') as f:
+                existing_embeddings = json.load(f)
+        except Exception:
+            existing_embeddings = {}
 
     embeddings = defaultdict(list, existing_embeddings)
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # Use higher quality settings for
+    device = get_safe_torch_device()
     mtcnn = MTCNN(image_size=160, margin=20, min_face_size=50, thresholds=[0.6, 0.7, 0.9], 
                   factor=0.709, post_process=True, keep_all=False, device=device)
     resnet = InceptionResnetV1(pretrained='vggface2').eval().to(device)
 
     for identity in os.listdir(db_path):
-        # Skip the profile_pics directory
-        if identity == 'profile_pics':
+        # Skip the profile_pics and non-identity directories
+        if identity in ['profile_pics', '__pycache__'] or identity.startswith('.'):
             continue
             
         identity_path = os.path.join(db_path, identity)
         if os.path.isdir(identity_path):
-            for image_name in os.listdir(identity_path):
-                image_path = os.path.join(identity_path, image_name)
+            # Gather all image files inside identity_path (including images/ subfolder)
+            image_files = []
+            for root, dirs, files in os.walk(identity_path):
+                for f in sorted(files):
+                    if f.lower().endswith(('.jpg', '.jpeg', '.png')):
+                        image_files.append(os.path.join(root, f))
+
+            # Deduplicate by filename and limit to at most 10 images per identity
+            processed_images = []
+            seen_basenames = set()
+            for img_p in image_files:
+                base = os.path.basename(img_p)
+                if base not in seen_basenames:
+                    seen_basenames.add(base)
+                    processed_images.append(img_p)
+                if len(processed_images) >= 10:
+                    break
+
+            new_identity_embeddings = []
+            for image_path in processed_images:
                 try:
                     img = Image.open(image_path).convert('RGB')
-                    # Apply image enhancement
                     img = ImageEnhance.Contrast(img).enhance(1.2)
                     img = ImageEnhance.Brightness(img).enhance(1.1)
                     
                     img_cropped = mtcnn(img)
                     if img_cropped is not None:
                         img_embedding = resnet(img_cropped.unsqueeze(0).to(device)).detach().cpu().numpy().tolist()
-                        embeddings[identity].append(img_embedding)
+                        new_identity_embeddings.append(img_embedding)
                 except Exception as e:
-                    print(f"Error processing {image_path}: {str(e)}")
+                    logger.warning(f"Error processing {image_path}: {str(e)}")
                     continue
+
+            if new_identity_embeddings:
+                embeddings[identity] = new_identity_embeddings
 
     with open(output_file, "w") as f:
         json.dump(dict(embeddings), f, indent=4)
 
-    return {"message": "Embeddings stored successfully", "output_file": output_file}
+    # Hot reload embeddings in memory
+    face_detector.embeddings = dict(embeddings)
+    logger.info(f"Embeddings stored successfully for {len(embeddings)} identities.")
+
+    return {"message": "Embeddings stored successfully", "output_file": output_file, "identities_count": len(embeddings)}
 
 @app.post("/store_embeddings/")
 def api_store_embeddings(request: EmbeddingRequest):
@@ -741,9 +825,240 @@ def load_embeddings(input_file: str = "face_embeddings.json"):
         embeddings = json.load(f)
     return embeddings
 
-@app.get('/check-in')
-async def check_in():
+def decode_base64_image(img_b64: str):
+    try:
+        if "," in img_b64:
+            img_b64 = img_b64.split(",", 1)[1]
+        img_bytes = base64.b64decode(img_b64)
+        nparr = np.frombuffer(img_bytes, np.uint8)
+        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        return frame
+    except Exception as e:
+        logger.warning(f"Error decoding base64 image: {e}")
+        return None
+
+def crop_detected_face(frame):
+    """
+    Detect and crop the face region from a camera frame with a natural margin.
+    If no face bounding box is found, falls back to center crop or original frame.
+    """
+    if frame is None or frame.size == 0:
+        return frame
+
+    h, w = frame.shape[:2]
+    pil_img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+
+    # 1. MTCNN bounding box detection
+    try:
+        boxes, probs = face_detector.mtcnn.detect(pil_img)
+        if boxes is not None and len(boxes) > 0:
+            best_idx = 0
+            if probs is not None and len(probs) > 1:
+                best_idx = int(np.argmax(probs))
+            box = boxes[best_idx]
+            x1, y1, x2, y2 = box
+
+            box_w = x2 - x1
+            box_h = y2 - y1
+            # Add 20% margin around bounding box to capture head comfortably
+            margin_x = int(box_w * 0.2)
+            margin_y = int(box_h * 0.2)
+
+            x1 = max(0, int(x1) - margin_x)
+            y1 = max(0, int(y1) - margin_y)
+            x2 = min(w, int(x2) + margin_x)
+            y2 = min(h, int(y2) + margin_y)
+
+            if x2 > x1 and y2 > y1:
+                crop = frame[y1:y2, x1:x2]
+                if crop.size > 0:
+                    return crop
+    except Exception as e:
+        logger.debug(f"MTCNN detection error in crop_detected_face: {e}")
+
+    # 2. Fallback: OpenCV Haar Cascade
+    try:
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+        if os.path.exists(cascade_path):
+            cascade = cv2.CascadeClassifier(cascade_path)
+            faces = cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=3, minSize=(60, 60))
+            if len(faces) > 0:
+                x, y, fw, fh = max(faces, key=lambda item: item[2] * item[3])
+                margin_x = int(fw * 0.2)
+                margin_y = int(fh * 0.2)
+                x1 = max(0, x - margin_x)
+                y1 = max(0, y - margin_y)
+                x2 = min(w, x + fw + margin_x)
+                y2 = min(h, y + fh + margin_y)
+                crop = frame[y1:y2, x1:x2]
+                if crop.size > 0:
+                    return crop
+    except Exception as e:
+        logger.debug(f"Haar cascade detection error: {e}")
+
+    # 3. Fallback: Center portrait crop
+    cx1 = int(w * 0.15)
+    cy1 = int(h * 0.1)
+    cx2 = int(w * 0.85)
+    cy2 = int(h * 0.9)
+    if cx2 > cx1 and cy2 > cy1:
+        return frame[cy1:cy2, cx1:cx2]
+
+    return frame
+
+class RegisterStaffFacesRequest(BaseModel):
+    emp_id: str
+    images: List[str]
+
+@app.post("/register-staff-faces/")
+async def register_staff_faces(request: RegisterStaffFacesRequest):
+    """
+    Extract face region from each captured image and store it in media.
+    Per user request: DO NOT compute or train embeddings during capture.
+    """
+    try:
+        emp_id = request.emp_id.strip()
+        if not emp_id or not request.images:
+            raise HTTPException(status_code=400, detail="Staff ID and images are required")
+
+        # Media directory in workspace root (media/<emp_id>/images/)
+        media_base = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "media"))
+        if not os.path.exists(media_base):
+            media_base = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "media"))
+
+        staff_media_dir = os.path.join(media_base, emp_id)
+        staff_images_dir = os.path.join(staff_media_dir, "images")
+        profile_pics_dir = os.path.join(media_base, "profile_pics")
+        os.makedirs(staff_images_dir, exist_ok=True)
+        os.makedirs(profile_pics_dir, exist_ok=True)
+
+        saved_count = 0
+        profile_saved = False
+
+        for idx, img_b64 in enumerate(request.images):
+            frame = decode_base64_image(img_b64)
+            if frame is None:
+                continue
+
+            # Detect and extract the cropped face
+            face_crop = crop_detected_face(frame)
+            if face_crop is None or face_crop.size == 0:
+                face_crop = frame
+
+            # Save the cropped face to media/<emp_id>/images/image_{i}.jpg
+            img_path = os.path.join(staff_images_dir, f"image_{idx + 1}.jpg")
+            cv2.imwrite(img_path, face_crop)
+
+            # Also save to media/<emp_id>/img_{i}.jpg for compatibility
+            cv2.imwrite(os.path.join(staff_media_dir, f"img_{idx + 1}.jpg"), face_crop)
+            saved_count += 1
+
+            # Save the first cropped face as the official profile picture
+            if not profile_saved:
+                profile_path = os.path.join(profile_pics_dir, f"{emp_id}.jpg")
+                cv2.imwrite(profile_path, face_crop)
+                profile_saved = True
+
+        if saved_count == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="No valid face images could be processed. Please try capturing again."
+            )
+
+        logger.info(f"Stored {saved_count} cropped face photos for staff {emp_id} in {staff_images_dir} (embeddings training postponed)")
+        return {
+            "status": "success",
+            "message": f"Successfully captured and stored {saved_count} face photos for staff {emp_id}",
+            "images_saved": saved_count,
+            "images_directory": staff_images_dir
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error registering staff faces: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+def process_frame_for_attendance(frame, action="check_in"):
+    """Recognize face from a client-provided frame (from any client device) and record attendance."""
+    if frame is None:
+        raise HTTPException(status_code=400, detail="Invalid or empty image frame provided.")
+    
+    pil_img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    face_tensor = face_detector.mtcnn(pil_img)
+    if face_tensor is None:
+        enhanced_face = ImageEnhance.Contrast(pil_img).enhance(1.3)
+        face_tensor = face_detector.mtcnn(enhanced_face)
+
+    if face_tensor is None:
+        try:
+            w, h = pil_img.size
+            crop_box = (int(w * 0.15), int(h * 0.1), int(w * 0.85), int(h * 0.9))
+            cropped = pil_img.crop(crop_box).resize((160, 160))
+            tensor_crop = torch.tensor(np.array(cropped), dtype=torch.float32).permute(2, 0, 1) / 255.0
+            face_tensor = (tensor_crop - 0.5) / 0.5
+        except Exception:
+            pass
+
+    if face_tensor is None:
+        raise HTTPException(status_code=400, detail="No face detected. Please face the camera directly with good lighting.")
+
+    identity, dist = face_detector.recognize_face(face_tensor)
+    if identity == "Unknown" or not identity:
+        raise HTTPException(status_code=400, detail="Face not recognized. Please ensure your face is registered in the system.")
+
+    confidence = 1.0 - (dist if dist is not None else 0.5)
+    now_time = datetime.now().strftime("%H:%M:%S")
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT emp_name, department FROM Home_employee WHERE emp_id = ?", (identity,))
+    employee = cursor.fetchone()
+    conn.close()
+
+    if not employee:
+        raise HTTPException(status_code=404, detail=f"Employee profile for {identity} not found in database.")
+
+    emp_name, department = employee
+    save_attendance(identity, now_time, action)
+
+    return {
+        "status": "success",
+        "message": f"{'Checked in' if action == 'check_in' else 'Checked out'} successfully",
+        "action_type": action,
+        "employee": {
+            "name": emp_name,
+            "id": identity,
+            "department": department,
+            "confidence": f"{max(0.5, confidence):.2%}",
+            "time": now_time
+        }
+    }
+
+class RecognizeFrameRequest(BaseModel):
+    image: str
+    action: Optional[str] = "check_in"
+
+@app.post('/recognize-frame')
+async def recognize_frame(req: RecognizeFrameRequest):
+    frame = decode_base64_image(req.image)
+    return process_frame_for_attendance(frame, req.action or "check_in")
+
+@app.api_route('/check-in', methods=['GET', 'POST'])
+async def check_in(request: Request = None):
     global face_recognition_history, latest_detection_times
+
+    # If POST with image from client camera on any device
+    if request and request.method == 'POST':
+        try:
+            body = await request.json()
+            if body and body.get('image'):
+                frame = decode_base64_image(body['image'])
+                if frame is not None:
+                    return process_frame_for_attendance(frame, "check_in")
+        except Exception as e:
+            logger.info(f"POST body didn't contain client image or was empty: {e}")
 
     print(f"DEBUG - Check-in called")
     print(f"DEBUG - face_recognition_history: {len(face_recognition_history) if face_recognition_history else 0} items")
@@ -906,9 +1221,20 @@ async def check_in():
     print("DEBUG - No recognizable faces found")
     raise HTTPException(status_code=400, detail="No recognizable faces found. Please ensure your face is visible to the camera.")
 
-@app.get('/check-out')
-async def check_out():
+@app.api_route('/check-out', methods=['GET', 'POST'])
+async def check_out(request: Request = None):
     global face_recognition_history, latest_detection_times
+
+    # If POST with image from client camera on any device
+    if request and request.method == 'POST':
+        try:
+            body = await request.json()
+            if body and body.get('image'):
+                frame = decode_base64_image(body['image'])
+                if frame is not None:
+                    return process_frame_for_attendance(frame, "check_out")
+        except Exception as e:
+            logger.info(f"POST body didn't contain client image or was empty: {e}")
 
     # Check if we have recent face data
     if not face_recognition_history and not latest_detection_times:
@@ -1200,6 +1526,5 @@ async def recent_activity_stream():
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 if __name__ == '__main__':
-    loop = asyncio.get_event_loop()
-    threading.Thread(target=lambda: loop.run_until_complete(video_capture()), daemon=True).start()
+    threading.Thread(target=video_capture, daemon=True).start()
     uvicorn.run(app, host="0.0.0.0", port=5600)
