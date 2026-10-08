@@ -1,7 +1,7 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from enum import Enum
 
-from sqlalchemy import Boolean, DateTime, Enum as SAEnum, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Date, DateTime, Enum as SAEnum, Float, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database.session import Base
@@ -46,3 +46,24 @@ class PasswordResetToken(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime)
     used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class AttendanceType(str, Enum):
+    check_in = "check_in"
+    check_out = "check_out"
+
+
+class AttendanceEvent(Base):
+    """Append-only log of check-ins/check-outs. Daily first-in/last-out is derived from it."""
+
+    __tablename__ = "attendance_events"
+    __table_args__ = (Index("ix_attendance_events_user_work_date", "user_id", "work_date"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    event_type: Mapped[AttendanceType] = mapped_column(
+        SAEnum(AttendanceType, native_enum=False, length=16, values_callable=lambda e: [m.value for m in e])
+    )
+    occurred_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)  # UTC
+    work_date: Mapped[date] = mapped_column(Date, index=True)  # local date in APP_TIMEZONE
+    face_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)

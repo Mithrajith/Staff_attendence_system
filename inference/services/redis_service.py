@@ -59,6 +59,19 @@ class RedisService:
         self.client.set(key, "1", ex=config.ATTENDANCE_DEBOUNCE_TTL)
 
     # ------------------------------------------------------------------
+    # Face verification (consumed by the user API to gate check-in/check-out)
+    # ------------------------------------------------------------------
+    def mark_face_verified(self, identity: str, confidence: float) -> None:
+        """Flags `identity` as having just been recognized. The API reads (and consumes) this key.
+
+        The key prefix must match api/core/face_verification.py.
+        """
+        try:
+            self.client.set(f"face_verified:{identity}", f"{confidence:.4f}", ex=config.FACE_VERIFY_TTL)
+        except Exception as exc:
+            logger.warning("Failed to mark face verified for %s: %s", identity, exc)
+
+    # ------------------------------------------------------------------
     # Pub/Sub broadcast
     # ------------------------------------------------------------------
     def publish_event(self, event_type: str, data: dict) -> None:

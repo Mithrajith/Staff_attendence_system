@@ -3,6 +3,7 @@
 from functools import lru_cache
 from typing import Literal
 from urllib.parse import quote_plus
+from zoneinfo import ZoneInfo
 
 from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -28,6 +29,12 @@ class Settings(BaseSettings):
     db_pool_size: int = 10
     db_max_overflow: int = 20
     db_pool_recycle: int = 1800
+
+    # Redis is shared with the inference service (face-verification flags).
+    redis_url: SecretStr = SecretStr("redis://localhost:6379/0")
+
+    # Attendance "work day" boundaries are computed in this timezone; timestamps are stored in UTC.
+    app_timezone: str = "Asia/Kolkata"
 
     # Auth
     jwt_secret_key: SecretStr
@@ -65,6 +72,7 @@ class Settings(BaseSettings):
         jwt_secret = self.jwt_secret_key.get_secret_value()
         if len(jwt_secret) < 32:
             raise ValueError("JWT_SECRET_KEY must be at least 32 characters")
+        ZoneInfo(self.app_timezone)  # raises on an unknown timezone
         if not self.is_production:
             return self
         secrets = [jwt_secret]

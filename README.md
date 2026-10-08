@@ -177,3 +177,19 @@ Endpoints under `/api/v1` (Swagger at `/docs` when `APP_ENV=development`):
 | PUT | `/users/{id}/password` | self (needs `current_password`) or admin |
 
 `APP_ENV=production` refuses to start with weak/placeholder secrets, console email, or wildcard CORS, and disables `/docs`.
+
+### Attendance
+
+Check-in / check-out events are stored append-only (`attendance_events`); the user-facing view is the day's **first check-in** and **last check-out**, admins see every event.
+
+Face gating: the inference service writes `face_verified:<user_id>` to Redis (TTL `FACE_VERIFY_TTL`) whenever it recognizes a face. The face identity registered in Qdrant (`emp_id`) **must be the user's id**. `GET /attendance/me/status` returns `can_check_in` / `can_check_out` for the UI buttons, and the POST endpoints re-check the flag server-side and consume it (one recognition = one action).
+
+| Method | Path | Access |
+|---|---|---|
+| GET | `/attendance/me/status` | any user (button state, today's first-in/last-out) |
+| POST | `/attendance/check-in`, `/attendance/check-out` | staff, admin (needs verified face) |
+| GET | `/attendance/me?date_from&date_to` | any user (own days: first in / last out) |
+| GET | `/attendance/records?user_id&date_from&date_to` | admin (daily summaries with counts, all users) |
+| GET | `/attendance/events?user_id&date_from&date_to` | admin (every raw event) |
+
+Sequence is per work day (in `APP_TIMEZONE`): check-in is valid when not already checked in; check-out only after a check-in. A forgotten check-out leaves that day without a last check-out.

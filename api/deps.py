@@ -23,12 +23,14 @@ class Permission(str, Enum):
     users_read_any = "users:read_any"
     users_manage = "users:manage"  # activate / deactivate / delete
     users_set_password_any = "users:set_password_any"
+    attendance_mark_self = "attendance:mark_self"  # check in / out as yourself
+    attendance_read_any = "attendance:read_any"  # all users' records and raw events
 
 
 ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
     Role.admin: frozenset(Permission),
     Role.system: frozenset(),  # TBD
-    Role.staff: frozenset(),
+    Role.staff: frozenset({Permission.attendance_mark_self}),
 }
 
 _bearer = HTTPBearer(auto_error=False)

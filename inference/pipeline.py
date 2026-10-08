@@ -143,6 +143,7 @@ class RealtimeFacePipeline:
             )
 
             if result.identity != "Unknown":
+                self.redis.mark_face_verified(result.identity, result.confidence)
                 employee = _lookup_employee(result.identity)
                 if employee:
                     face.emp_name = employee["emp_name"]

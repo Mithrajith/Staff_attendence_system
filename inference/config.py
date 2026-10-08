@@ -77,6 +77,7 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 REDIS_EVENTS_CHANNEL = os.getenv("REDIS_EVENTS_CHANNEL", "face_recognition_events")
 RECOGNITION_CACHE_TTL = int(os.getenv("RECOGNITION_CACHE_TTL", "5"))  # seconds, de-dupe identical hits
 ATTENDANCE_DEBOUNCE_TTL = int(os.getenv("ATTENDANCE_DEBOUNCE_TTL", "60"))  # seconds between repeat check-in/out
+FACE_VERIFY_TTL = int(os.getenv("FACE_VERIFY_TTL", "30"))  # seconds a recognition stays valid for check-in/out
 
 # ---------------------------------------------------------------------------
 # Misc / storage paths
