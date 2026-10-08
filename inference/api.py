@@ -9,6 +9,8 @@ debounce. GPU is optional; everything also runs on CPU.
 Primary interface: WebSocket streaming (continuous, low-latency). A small set
 of REST endpoints are kept for backward compatibility with the existing
 Django front-end (staff registration, single-shot check-in/out).
+
+It's deprecated and no longer in usage, use the main API instead. (path : /api/main.py)
 """
 
 import asyncio
@@ -248,10 +250,7 @@ async def register_staff_faces(request: RegisterStaffFacesRequest):
     if not emp_id or not request.images:
         raise HTTPException(status_code=400, detail="Staff ID and images are required")
 
-    media_base = os.path.abspath(os.path.join(config.REPO_ROOT, "..", "media"))
-    if not os.path.exists(media_base):
-        media_base = config.MEDIA_DIR
-
+    media_base = config.MEDIA_DIR
     staff_images_dir = os.path.join(media_base, emp_id, "images")
     profile_pics_dir = os.path.join(media_base, "profile_pics")
     os.makedirs(staff_images_dir, exist_ok=True)

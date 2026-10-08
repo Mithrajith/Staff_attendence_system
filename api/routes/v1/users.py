@@ -5,6 +5,7 @@ from sqlalchemy import delete, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from api.core.logs import audit
 from api.core.security import generate_temp_password, hash_password, verify_password
 from api.deps import CurrentUser, Permission, get_user_or_404, has_permission, require
 from api.routes.models.user import PasswordChange, UserCreate, UserList, UserOut
@@ -26,9 +27,10 @@ def _self_or(permission: Permission, user: CurrentUser, user_id: int) -> None:
     "",
     response_model=UserOut,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require(Permission.users_create))],
 )
-def create_user(body: UserCreate, bg: BackgroundTasks, db: DB) -> User:
+def create_user(
+    body: UserCreate, bg: BackgroundTasks, db: DB, actor: Annotated[User, Depends(require(Permission.users_create))]
+) -> User:
     if body.department_id is not None and db.get(Department, body.department_id) is None:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Unknown department")
     svc.ensure_unique(db, email=body.email, username=body.username, employee_id=body.employee_id)
@@ -48,6 +50,7 @@ def create_user(body: UserCreate, bg: BackgroundTasks, db: DB) -> User:
         db.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, "Email, username or employee ID already registered")
     db.refresh(user)
+    audit("user_created", actor_id=actor.id, target_id=user.id, role=user.role.value)
     if body.password is None:
         svc.send_welcome(db, bg, user)
     return user
@@ -98,6 +101,7 @@ def _set_active(user_id: int, active: bool, actor: User, db: Session) -> User:
     target = get_user_or_404(db, user_id)
     target.is_active = active
     db.commit()
+    audit("user_activated" if active else "user_deactivated", actor_id=actor.id, target_id=target.id)
     return target
 
 
@@ -119,6 +123,7 @@ def delete_user(user_id: int, db: DB, actor: Annotated[User, Depends(require(Per
     db.execute(delete(PasswordResetToken).where(PasswordResetToken.user_id == target.id))
     db.delete(target)
     db.commit()
+    audit("user_deleted", actor_id=actor.id, target_id=user_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -138,4 +143,5 @@ def change_password(user_id: int, body: PasswordChange, actor: CurrentUser, db: 
         target = get_user_or_404(db, user_id)
     svc.set_password(db, target, body.new_password)
     db.commit()
+    audit("password_changed", actor_id=actor.id, target_id=target.id, by_admin=actor.id != target.id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -56,7 +56,6 @@ StaffFaceRecognition/settings.py
 StaffFaceRecognition/StaffFaceData.zip
 
 # Docker
-.dockerignore
 docker-compose.override.yml
 .docker/
 docker-compose.dev.yml

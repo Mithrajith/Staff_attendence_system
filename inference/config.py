@@ -18,7 +18,7 @@ logger = logging.getLogger("inference.config")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.abspath(os.path.join(BASE_DIR, ".."))
-MODELS_DIR = os.path.join(BASE_DIR, "models")
+MODELS_DIR = os.path.abspath(os.getenv("MODELS_DIR") or os.path.join(BASE_DIR, "models"))
 os.makedirs(MODELS_DIR, exist_ok=True)
 
 
@@ -83,7 +83,7 @@ FACE_VERIFY_TTL = int(os.getenv("FACE_VERIFY_TTL", "30"))  # seconds a recogniti
 # Misc / storage paths
 # ---------------------------------------------------------------------------
 DJANGO_DB_PATH = os.path.join(REPO_ROOT, "db.sqlite3")
-MEDIA_DIR = os.path.join(REPO_ROOT, "media")
+MEDIA_DIR = os.path.abspath(os.getenv("MEDIA_DIR") or os.path.join(REPO_ROOT, "media"))  # enrolled face crops
 JSON_EMBEDDINGS_EXPORT = os.path.join(BASE_DIR, "face_embeddings.json")
 
 # WebSocket streaming tunables

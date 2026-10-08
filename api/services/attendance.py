@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from api.core import face_verification
 from api.core.config import get_settings
+from api.core.logs import audit
 from api.routes.models.attendance import AttendanceStatus, AttendanceToday
 from database.models import AttendanceEvent, AttendanceType, User, utcnow
 
@@ -99,6 +100,7 @@ def mark(db: Session, user: User, action: AttendanceType) -> AttendanceEvent:
     )
     db.add(event)
     db.commit()
+    audit("attendance_recorded", actor_id=user.id, action=action.value, source="self", event_id=event.id)
     return event
 
 

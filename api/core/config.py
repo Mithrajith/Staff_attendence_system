@@ -33,6 +33,13 @@ class Settings(BaseSettings):
     # Redis is shared with the inference service (face-verification flags).
     redis_url: SecretStr = SecretStr("redis://localhost:6379/0")
 
+    # Logging. LOG_DIR empty = console only. Files: app.log, error.log, access.log, audit.log (size-rotated).
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+    log_format: Literal["auto", "json", "text"] = "auto"  # auto: json in production, text otherwise
+    log_dir: str = "logs"
+    log_max_bytes: int = Field(10 * 1024 * 1024, ge=1024)
+    log_backup_count: int = Field(10, ge=1)
+
     # Attendance "work day" boundaries are computed in this timezone; timestamps are stored in UTC.
     app_timezone: str = "Asia/Kolkata"
 

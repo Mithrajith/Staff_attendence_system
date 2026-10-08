@@ -6,6 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from api.core.config import get_settings
+from api.core.logs import audit
 from api.core.security import create_access_token, hash_password, verify_password
 from api.routes.models.auth import (
     ForgotPasswordRequest,
@@ -34,13 +35,16 @@ def login(body: LoginRequest, db: DB) -> TokenResponse:
     user = _find_by_identifier(db, body.username)
     # Always runs a hash verification, even for unknown emails, to keep timing uniform.
     if not verify_password(body.password, user.password_hash if user else None):
+        audit("login_failed", username=body.username[:100], reason="bad_credentials")
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED, "Incorrect email or password", headers={"WWW-Authenticate": "Bearer"}
         )
     if not user.is_active:
+        audit("login_failed", username=body.username[:100], actor_id=user.id, reason="deactivated")
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Account is deactivated")
     user.last_login_at = utcnow()
     db.commit()
+    audit("login_success", actor_id=user.id, role=user.role.value)
     minutes = get_settings().kiosk_token_expire_minutes if user.role == Role.system else None
     token, expires_in = create_access_token(user.id, user.token_version, minutes)
     return TokenResponse(access_token=token, expires_in=expires_in)
@@ -70,6 +74,7 @@ def signup(body: SignupRequest, db: DB) -> SignupResponse:
         db.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, "Username, email or employee ID already registered")
     db.refresh(user)
+    audit("signup", actor_id=user.id, username=user.username, employee_id=user.employee_id)
     token, expires_in = create_access_token(user.id, user.token_version)
     return SignupResponse(access_token=token, expires_in=expires_in, user=user)
 
@@ -79,6 +84,7 @@ def forgot_password(body: ForgotPasswordRequest, bg: BackgroundTasks, db: DB) ->
     user = _find_by_identifier(db, body.username)
     if user and user.is_active:
         svc.send_password_reset(db, bg, user)
+    audit("password_reset_requested", username=body.username[:100], known=bool(user and user.is_active))
     # Same response whether or not the account exists, to avoid email enumeration.
     return Message(detail="If the account exists, a reset link has been sent")
 
@@ -88,7 +94,9 @@ def reset_password(body: ResetPasswordRequest, db: DB) -> Message:
     user = svc.consume_reset_token(db, body.token)
     if user is None:
         db.rollback()
+        audit("password_reset_failed", reason="invalid_or_expired_token")
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid or expired reset token")
     svc.set_password(db, user, body.new_password)
     db.commit()
+    audit("password_reset_completed", actor_id=user.id)
     return Message(detail="Password updated. Please sign in with your new password")

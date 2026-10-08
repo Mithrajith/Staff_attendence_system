@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from api.core.config import get_settings
+from api.core.logs import audit
 from api.core.security import create_match_token, decode_match_token
 from api.deps import CurrentUser, Permission, has_permission, require
 from api.routes.models.kiosk import DetectOut, FrameIn, IdentifyOut, RecordIn, RecordOut
@@ -59,8 +60,10 @@ def identify(body: FrameIn, db: DB, kiosk: CurrentUser) -> IdentifyOut:
     # The vector-DB identity is the user id (see api/services/face.py).
     user = db.get(User, int(identity)) if identity.isdigit() else None
     if not _eligible(user):
+        audit("kiosk_identify", kiosk_id=kiosk.id, outcome="unknown", score=round(confidence, 3))
         admin = db.scalar(select(User.full_name).where(User.role == Role.admin, User.is_active).order_by(User.id).limit(1))
         return IdentifyOut(status="unknown", contact=admin)
+    audit("kiosk_identify", kiosk_id=kiosk.id, outcome="matched", target_id=user.id, score=round(confidence, 3))
     return IdentifyOut(
         status="matched",
         match_token=create_match_token(user.id, kiosk.id, confidence),
@@ -75,11 +78,14 @@ def record(body: RecordIn, db: DB, kiosk: CurrentUser) -> RecordOut:
     match = decode_match_token(body.match_token, kiosk.id)
     user = db.get(User, match["pid"]) if match else None
     if not _eligible(user):
+        audit("kiosk_record", kiosk_id=kiosk.id, outcome="expired", action=body.action.value)
         return RecordOut(status="expired")
 
     event = attendance_svc.record_scan(db, user, body.action, match.get("conf", 0.0))
     if event is None:
         rejected = "already_checked_in" if body.action == AttendanceType.check_in else "not_checked_in"
+        audit("kiosk_record", kiosk_id=kiosk.id, target_id=user.id, outcome=rejected, action=body.action.value)
         return RecordOut(status=rejected, action=body.action, **_person(user))
+    audit("attendance_recorded", actor_id=kiosk.id, target_id=user.id, action=body.action.value, source="kiosk", event_id=event.id)
     local = event.occurred_at.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo(get_settings().app_timezone))
     return RecordOut(status="recorded", action=body.action, occurred_at=event.occurred_at, hour=local.hour, **_person(user))

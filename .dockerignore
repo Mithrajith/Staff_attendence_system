@@ -1,0 +1,26 @@
+.git
+.gitignore
+.idea
+.vscode
+.venv
+.pytest_cache
+**/__pycache__
+**/*.pyc
+
+# secrets and runtime data never go into the image
+.env
+.env.*
+!.env.example
+mysql_data*
+qdrant_data*
+redis_data*
+media
+logs
+testing
+
+tests
+docs
+README.md
+docker-compose*.yml
+Dockerfile
+.dockerignore

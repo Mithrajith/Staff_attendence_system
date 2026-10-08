@@ -1,52 +1,66 @@
+# Only the application is published to the host (APP_PORT). MySQL, Redis and Qdrant live on the
+# internal `backend` network and are reachable by the app only.
+# Host directories for data, images and logs are configured in .env (see .env.example).
+
 services:
+  app:
+    build:
+      context: .
+      args:
+        APP_UID: ${APP_UID:-1000}
+        APP_GID: ${APP_GID:-1000}
+        TORCH_INDEX_URL: ${TORCH_INDEX_URL-https://download.pytorch.org/whl/cpu}
+    image: staff-attendance-app:latest
+    container_name: staff_attendance_app
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Service hostnames inside the compose network override the host-style values in .env.
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      REDIS_URL: redis://redis:6379/0
+      QDRANT_URL: http://qdrant:6333
+      MYSQL_ROOT_PASSWORD: ""  # the app never needs the root password
+      # Container-side paths; the host side is MEDIA_HOST_DIR / LOG_HOST_DIR below.
+      MEDIA_DIR: /data/media
+      LOG_DIR: /var/log/staff-attendance
+      MODELS_DIR: /models/yolo
+      TORCH_HOME: /models/torch
+      YOLO_CONFIG_DIR: /models/ultralytics
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    volumes:
+      - ${MEDIA_HOST_DIR:-./media}:/data/media
+      - ${LOG_HOST_DIR:-./logs}:/var/log/staff-attendance
+      - model_cache:/models
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    networks:
+      - backend
+      - edge
+
   qdrant:
     image: qdrant/qdrant:latest
     container_name: qdrant_db
     restart: unless-stopped
-    ports:
-      - "6333:6333"
-      - "6334:6334"
     environment:
       QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY}
     volumes:
-      - ./qdrant_data:/qdrant/storage
-    env_file:
-      - .env
-
-  mysql:
-    image: mysql:8.4
-    container_name: staff_attendance_mysql
-    restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-staff_attendance}
-      MYSQL_USER: ${MYSQL_USER:-staff_app}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env}
-    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
-    ports:
-      - "127.0.0.1:${MYSQL_PORT:-3306}:3306"
-    volumes:
-      - ./mysql_data:/var/lib/mysql
+      - ${QDRANT_DATA_DIR:-./qdrant_data}:/qdrant/storage
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333'"]
       interval: 10s
       timeout: 5s
       retries: 10
-
-  redis:
-    image: redis:7-alpine
-    container_name: face_recognition_redis
-    restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes"]
-    ports:
-      - "6379:6379"
-    volumes:
-      - ./redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
+      start_period: 10s
+    networks:
+      - backend
 
   mysql:
     image: mysql:8.4
@@ -58,13 +72,39 @@ services:
       MYSQL_DATABASE: ${MYSQL_DATABASE:-staff_attendance}
       MYSQL_USER: ${MYSQL_USER:-staff_app}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env}
-    ports:
-      - "${MYSQL_PORT:-3306}:3306"
     volumes:
-      - ./mysql_data:/var/lib/mysql
+      - ${MYSQL_DATA_DIR:-./mysql_data}:/var/lib/mysql
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 30s
+    networks:
+      - backend
+
+  redis:
+    image: redis:7-alpine
+    container_name: face_recognition_redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - ${REDIS_DATA_DIR:-./redis_data}:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - backend
+
+networks:
+  # No route to the host or the internet: databases are isolated.
+  backend:
+    internal: true
+  # Used by the app only: the published port plus outbound access (model download, SMTP).
+  edge:
+
+volumes:
+  # YOLO / VGGFace2 weights, so they are downloaded once and survive rebuilds.
+  model_cache:

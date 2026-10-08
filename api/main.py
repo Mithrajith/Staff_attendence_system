@@ -1,3 +1,4 @@
+import logging
 import os
 from contextlib import AsyncExitStack, asynccontextmanager
 
@@ -6,24 +7,30 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from api.core.config import get_settings
+from api.core.logs import RequestLogMiddleware, setup_logging
 from api.routes import web
 from api.routes.v1.router import router as v1_router
 from database.session import get_engine
 
+logger = logging.getLogger("api.main")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    get_settings()  # fail fast on bad configuration
+    s = get_settings()  # fail fast on bad configuration
+    logger.info("Starting (env=%s, log_dir=%s)", s.app_env, s.log_dir or "console only")
     async with AsyncExitStack() as stack:
         inference_app = getattr(app.state, "inference_app", None)
         if inference_app is not None:
             # Mounted apps don't get their own lifespan; run it so the models are warm at startup.
             await stack.enter_async_context(inference_app.router.lifespan_context(inference_app))
         yield
+    logger.info("Stopped")
 
 
 def create_app() -> FastAPI:
     s = get_settings()
+    setup_logging(s)  # before the inference import, whose module calls logging.basicConfig
     app = FastAPI(
         title="Staff Attendance API",
         lifespan=lifespan,
@@ -39,6 +46,7 @@ def create_app() -> FastAPI:
             allow_methods=["GET", "POST", "PUT", "DELETE"],
             allow_headers=["Authorization", "Content-Type"],
         )
+    app.add_middleware(RequestLogMiddleware)  # added last = outermost, so it sees every response
 
     @app.get("/healthz", include_in_schema=False)
     def healthz(response: Response):

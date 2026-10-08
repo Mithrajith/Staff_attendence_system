@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field, StringConstraints
 from sqlalchemy.orm import Session
 
 from api.core.config import get_settings
+from api.core.logs import audit
 from api.deps import CurrentUser, Permission, require
 from api.services import face as svc
 from database.models import User
@@ -46,4 +47,5 @@ async def enroll(
 ) -> EnrollResponse:
     """Validates the photos, checks MySQL + the vector DB for an existing enrollment/face, then ingests."""
     stored = await svc.enroll(db, user, body.images)
+    audit("face_enrolled", actor_id=user.id, embeddings=stored)
     return EnrollResponse(enrolled=True, embeddings_stored=stored)
