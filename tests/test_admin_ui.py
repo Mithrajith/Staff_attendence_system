@@ -57,3 +57,18 @@ def test_user_search_matches_username_and_employee_id(client):
         items = client.get(f"{P}/users", headers=h, params={"q": q}).json()["items"]
         assert [u["email"] for u in items] == ["z@x.com"]
     assert admin
+
+
+def test_about_page_and_static_assets(client):
+    r = client.get("/about")
+    assert r.status_code == 200
+    assert "text/html" in r.headers["content-type"]
+    assert "Faculty Attendance System" in r.text
+    assert "Mithrajith K S" in r.text
+    assert "Sai Dhinakar S" in r.text
+    assert "Siddharth T" in r.text
+    assert "Sri Shakthi Institute of Engineering" in r.text
+
+    img = client.get("/static/img/image.png")
+    assert img.status_code == 200
+

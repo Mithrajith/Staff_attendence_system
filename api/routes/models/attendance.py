@@ -84,3 +84,26 @@ class AttendanceEventList(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class StaffDailyReportItem(BaseModel):
+    user_id: int
+    full_name: str
+    email: EmailStr
+    employee_id: str | None = None
+    department: str | None = None
+    first_check_in: UTCDateTime | None = None
+    last_check_out: UTCDateTime | None = None
+    total_seconds: int = 0
+    total_time_formatted: str = "-"
+    is_checked_in: bool = False
+    status: str = "absent"  # "checked_in", "checked_out", "absent"
+
+
+class StaffDailyReport(BaseModel):
+    work_date: date
+    items: list[StaffDailyReportItem]
+    total_staff: int
+    present_count: int
+    currently_in_count: int
+    absent_count: int

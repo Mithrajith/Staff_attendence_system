@@ -2,68 +2,872 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>My attendance - Staff Attendance</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>My Attendance — Faculty Attendance</title>
+<link rel="icon" href="/static/img/image.png" type="image/png">
 <style>
-  * { box-sizing: border-box; }
-  body { margin: 0; font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Arial, sans-serif; background: #fff; color: #111; }
-  main { max-width: 860px; margin: 0 auto; padding: 0 20px 64px; }
-  header { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; padding: 24px 0 12px; border-bottom: 1px solid #ddd; }
-  header .title { font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #666; }
-  header .who { font-size: 13px; color: #666; }
-  h2 { font-size: 18px; font-weight: 600; margin: 32px 0 12px; }
-  label { display: block; font-size: 12px; color: #666; }
-  input { display: block; padding: 6px 0; font: inherit; border: 0; border-bottom: 1px solid #ccc; border-radius: 0; background: transparent; color: inherit; outline: 0; }
-  input:focus { border-bottom-color: #111; }
-  button { padding: 7px 16px; font: inherit; border: 1px solid #111; border-radius: 0; background: #111; color: #fff; cursor: pointer; }
-  button.secondary { background: #fff; color: #111; border-color: #ccc; }
-  button.link { padding: 0; border: 0; background: none; color: #111; text-decoration: underline; }
-  button:disabled { opacity: .4; cursor: default; }
-  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; }
-  .stats .num { font-size: 26px; font-weight: 600; line-height: 1.2; }
-  .stats .lbl { font-size: 12px; color: #666; }
-  .tabs { display: flex; gap: 20px; flex-wrap: wrap; border-bottom: 1px solid #ddd; margin-bottom: 20px; }
-  .tabs button { padding: 8px 0; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; background: none; color: #666; }
-  .tabs button.on { color: #111; border-bottom-color: #111; }
-  .custom { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 20px; }
-  .scroll { overflow-x: auto; margin-top: 24px; }
-  table { width: 100%; border-collapse: collapse; }
-  th { text-align: left; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #666; padding: 8px 12px 8px 0; border-bottom: 1px solid #111; white-space: nowrap; }
-  td { padding: 8px 12px 8px 0; border-bottom: 1px solid #eee; white-space: nowrap; }
-  .muted { color: #666; }
-  .warn { color: #b42318; }
-  .msg { min-height: 1.4em; margin-top: 16px; font-size: 13px; color: #666; }
-  .msg.err { color: #b42318; }
-  .hidden { display: none; }
+  *, *::before, *::after { box-sizing: border-box; }
+  :root {
+    --blue: #1a73e8;
+    --blue-hover: #1558b0;
+    --blue-tint: #e8f0fe;
+    --surface: #ffffff;
+    --bg: #f8f9fa;
+    --card-bg: #ffffff;
+    --border: #dadce0;
+    --border-light: #edf0f2;
+    --text: #202124;
+    --muted: #5f6368;
+    --danger: #d93025;
+    --danger-tint: #fce8e6;
+    --success: #188038;
+    --success-tint: #e6f4ea;
+    --warn: #b06000;
+    --warn-tint: #fef7e0;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(60,64,67,.1), 0 2px 6px rgba(60,64,67,.06);
+    --nav-w: 230px;
+  }
+
+  body {
+    margin: 0;
+    font: 14px/1.5 "Google Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---- Fixed Topbar ---- */
+  #topbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 56px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 12px;
+    z-index: 100;
+  }
+  #menu-toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 38px; height: 38px;
+    border: 0;
+    background: transparent;
+    border-radius: 50%;
+    cursor: pointer;
+    color: var(--muted);
+    padding: 0;
+    transition: background .15s;
+    flex-shrink: 0;
+  }
+  #menu-toggle:hover { background: #f1f3f4; color: var(--text); }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--text);
+    text-decoration: none;
+    flex-shrink: 0;
+  }
+  .brand-dot {
+    display: inline-block;
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--blue);
+    box-shadow: 0 0 0 2px rgba(26,115,232,.2);
+  }
+  .spacer { flex: 1; }
+  .who-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+  .avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .btn-logout {
+    padding: 5px 12px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    cursor: pointer;
+    background: transparent;
+    color: var(--muted);
+    transition: all .15s;
+    white-space: nowrap;
+  }
+  .btn-logout:hover {
+    background: #f1f3f4;
+    color: var(--text);
+    border-color: #c0c4c9;
+  }
+
+  /* ---- Drawer Backdrop (Mobile) ---- */
+  #sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(32,33,36,.4);
+    backdrop-filter: blur(2px);
+    z-index: 89;
+  }
+  #sidebar-backdrop.open { display: block; }
+
+  /* ---- Sidebar ---- */
+  #sidebar {
+    position: fixed;
+    top: 56px; left: 0; bottom: 0;
+    width: var(--nav-w);
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 14px 10px;
+    overflow-y: auto;
+    z-index: 90;
+    transition: transform .25s ease;
+  }
+  .nav-section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 10px 12px 4px;
+  }
+  .nav-divider {
+    height: 1px;
+    background: var(--border-light);
+    margin: 8px 6px;
+  }
+  #sidebar nav a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    color: var(--text);
+    text-decoration: none;
+    margin-bottom: 2px;
+    transition: background .15s, color .15s;
+    cursor: pointer;
+    font-weight: 500;
+  }
+  #sidebar nav a:hover { background: rgba(32,33,36,.05); }
+  #sidebar nav a.on {
+    background: var(--blue-tint);
+    color: var(--blue);
+    font-weight: 600;
+  }
+  #sidebar nav a svg { flex-shrink: 0; opacity: .8; }
+  #sidebar nav a.on svg { opacity: 1; stroke: var(--blue); }
+
+  /* ---- Main Content ---- */
+  #content {
+    margin-top: 56px;
+    margin-left: var(--nav-w);
+    padding: 24px 28px 64px;
+    min-height: calc(100vh - 56px);
+  }
+
+  /* ---- Profile Card / Header Banner ---- */
+  .profile-banner {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    box-shadow: var(--shadow);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .profile-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .profile-avatar-lg {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--blue);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 600;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(26,115,232,.3);
+  }
+  .profile-details h1 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .profile-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+  }
+  .meta-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    background: #f1f3f4;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .status-badge-lg {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 24px;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid transparent;
+  }
+  .status-badge-lg.in {
+    background: var(--success-tint);
+    color: var(--success);
+    border-color: #b7dfca;
+  }
+  .status-badge-lg.out {
+    background: #f1f3f4;
+    color: var(--muted);
+    border-color: var(--border);
+  }
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .status-badge-lg.in .status-dot {
+    box-shadow: 0 0 0 3px rgba(24,128,56,.25);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0% { transform: scale(.95); opacity: 1; }
+    50% { transform: scale(1.15); opacity: .7; }
+    100% { transform: scale(.95); opacity: 1; }
+  }
+
+  /* ---- Section Header ---- */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 20px 0 12px;
+    gap: 12px;
+  }
+  .section-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-date-sub {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--muted);
+  }
+
+  /* ---- Today Stats Grid (Compact & Dense) ---- */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: 0 1px 2px rgba(60,64,67,.06);
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    transition: transform .15s, box-shadow .15s;
+  }
+  .stat-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .stat-icon.blue   { background: var(--blue-tint); color: var(--blue); }
+  .stat-icon.green  { background: var(--success-tint); color: var(--success); }
+  .stat-icon.purple { background: #f3e8fd; color: #8430ce; }
+  .stat-icon.amber  { background: var(--warn-tint); color: var(--warn); }
+  .stat-info { flex: 1; min-width: 0; }
+  .stat-card .num {
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .stat-card .lbl {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+    font-weight: 500;
+  }
+
+  /* ---- Report Card & Tabs ---- */
+  .report-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .report-top-bar {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    background: #fafafa;
+  }
+  .report-title-group h2 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .report-title-group p {
+    margin: 2px 0 0;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* Quick filter pills */
+  .pill-tabs {
+    display: flex;
+    gap: 4px;
+    background: #e8eaed;
+    padding: 3px;
+    border-radius: 20px;
+    overflow-x: auto;
+    max-width: 100%;
+  }
+  .pill-tab {
+    padding: 5px 12px;
+    border-radius: 16px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all .15s;
+  }
+  .pill-tab:hover { color: var(--text); }
+  .pill-tab.on {
+    background: var(--surface);
+    color: var(--blue);
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0,0,0,.08);
+  }
+
+  /* Custom Range Form */
+  .custom-form {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    padding: 12px 18px;
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .custom-form.hidden { display: none; }
+  .custom-form .field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .custom-form label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--muted);
+  }
+  .custom-form input[type="date"] {
+    padding: 6px 10px;
+    font: inherit;
+    font-size: 13px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    outline: none;
+  }
+  .custom-form input[type="date"]:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 2px rgba(26,115,232,.15);
+  }
+  .custom-form button {
+    padding: 7px 16px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid var(--blue);
+    border-radius: 6px;
+    background: var(--blue);
+    color: #fff;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .custom-form button:hover { background: var(--blue-hover); }
+
+  /* Summary Metrics Strip (inside Report) */
+  .summary-metrics-strip {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+  }
+  .metric-cell {
+    padding: 12px 16px;
+    border-right: 1px solid var(--border-light);
+  }
+  .metric-cell:last-child { border-right: none; }
+  .metric-cell .val {
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--text);
+  }
+  .metric-cell .val.warn { color: var(--warn); }
+  .metric-cell .lbl {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+    font-weight: 500;
+  }
+
+  /* Table styling */
+  .scroll-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    background: #fafafa;
+    white-space: nowrap;
+  }
+  tbody td {
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--border-light);
+    white-space: nowrap;
+    color: var(--text);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: rgba(32,33,36,.025); }
+
+  /* Status Chips */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .chip-in   { background: var(--success-tint); color: var(--success); }
+  .chip-ok   { background: var(--success-tint); color: var(--success); }
+  .chip-warn { background: var(--warn-tint); color: var(--warn); }
+  .chip-gray { background: #f1f3f4; color: var(--muted); }
+
+  .empty-state {
+    padding: 36px 20px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .footer-note {
+    font-size: 11px;
+    color: var(--muted);
+    padding: 10px 16px;
+    background: #fafafa;
+    border-top: 1px solid var(--border-light);
+    margin: 0;
+  }
+
+  /* Notices */
+  #notice {
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #b45309;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  #notice:empty { display: none; }
+  #notice a { color: var(--blue); font-weight: 500; text-decoration: underline; }
+  .msg { font-size: 13px; color: var(--muted); min-height: 1.2em; margin-bottom: 12px; }
+  .msg.err { color: var(--danger); }
+  .hidden { display: none !important; }
+
+  /* ========================================================================
+     MOBILE RESPONSIVENESS (≤ 768px & ≤ 480px)
+     ======================================================================== */
+  @media (max-width: 900px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .summary-metrics-strip { grid-template-columns: repeat(3, 1fr); }
+    .summary-metrics-strip .metric-cell:nth-child(3) { border-right: none; }
+  }
+
+  @media (max-width: 768px) {
+    :root { --nav-w: 0px; }
+    #menu-toggle { display: inline-flex; }
+    #sidebar {
+      transform: translateX(-100%);
+      width: 250px;
+      box-shadow: 2px 0 16px rgba(0,0,0,.15);
+    }
+    #sidebar.open { transform: translateX(0); }
+    #content {
+      margin-left: 0;
+      padding: 16px 14px 64px;
+    }
+    .profile-banner {
+      padding: 16px;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .status-badge-lg {
+      width: 100%;
+      justify-content: center;
+    }
+    .report-top-bar {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+    }
+    .pill-tabs {
+      width: 100%;
+      justify-content: flex-start;
+    }
+    .summary-metrics-strip {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .summary-metrics-strip .metric-cell:nth-child(2) { border-right: none; }
+    .summary-metrics-strip .metric-cell:nth-child(3) { border-right: 1px solid var(--border-light); }
+  }
+
+  @media (max-width: 480px) {
+    #content { padding: 12px 10px 48px; }
+    .profile-avatar-lg { width: 40px; height: 40px; font-size: 16px; }
+    .profile-details h1 { font-size: 16px; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .stat-card { padding: 12px 10px; gap: 8px; }
+    .stat-card .num { font-size: 17px; }
+    .stat-icon { width: 30px; height: 30px; border-radius: 6px; }
+    .summary-metrics-strip { grid-template-columns: 1fr 1fr; }
+    .metric-cell { padding: 8px 12px; }
+    .metric-cell .val { font-size: 15px; }
+    table { font-size: 12px; }
+    thead th, tbody td { padding: 8px 10px; }
+  }
 </style>
 </head>
 <body>
-<main>
-  <header>
-    <span class="title">Staff Attendance</span>
-    <span class="who"><span id="who"></span> <button type="button" id="logout" class="link">Log out</button></span>
-  </header>
-  <div class="msg" id="notice"></div>
+
+<!-- Fixed Top bar -->
+<header id="topbar">
+  <button id="menu-toggle" aria-label="Toggle navigation drawer">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <a class="brand" href="#" style="display:flex; align-items:center; gap:8px;">
+    <img src="/static/img/image.png" alt="Logo" style="width:24px; height:24px; object-fit:contain; border-radius:4px;">
+    Faculty Attendance
+  </a>
+  <div class="spacer"></div>
+  <div class="who-info">
+    <a href="/about" class="btn-about" title="About System & Team" style="text-decoration:none; color:var(--muted); font-size:12px; font-weight:500; display:inline-flex; align-items:center; gap:5px; padding:5px 12px; border-radius:16px; border:1px solid var(--border); transition:all .15s; margin-right:4px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      About
+    </a>
+    <div class="avatar" id="avatarInitial">U</div>
+    <span id="who" style="display:none;"></span>
+    <button class="btn-logout" id="logout">Sign out</button>
+  </div>
+</header>
+
+<!-- Drawer Backdrop for Mobile -->
+<div id="sidebar-backdrop"></div>
+
+<!-- Collapsible Sidebar -->
+<aside id="sidebar">
+  <nav id="nav">
+    <div class="nav-section-label">Overview</div>
+    <a data-range="today-overview" id="nav-today-overview" class="on">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+      </svg>
+      Dashboard
+    </a>
+
+    <div class="nav-divider"></div>
+    <div class="nav-section-label">Reports &amp; History</div>
+
+    <a data-range="month" id="nav-month">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>
+      This Month
+    </a>
+    <a data-range="week" id="nav-week">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+      </svg>
+      This Week
+    </a>
+    <a data-range="lastweek" id="nav-lastweek">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+      Last Week
+    </a>
+    <a data-range="lastmonth" id="nav-lastmonth">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+      </svg>
+      Last Month
+    </a>
+    <a data-range="custom" id="nav-custom">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="12" y1="18" x2="20" y2="18"/>
+      </svg>
+      Custom Range
+    </a>
+
+    <div class="nav-divider"></div>
+    <div class="nav-section-label">Information</div>
+    <a href="/about" id="nav-about">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+      </svg>
+      Our Story &amp; About
+    </a>
+  </nav>
+</aside>
+
+<!-- Main Page Content -->
+<main id="content">
+  <div id="notice"></div>
   <div class="msg" id="msg"></div>
 
-  <h2>Today <span class="muted" id="todayDate"></span></h2>
-  <div class="stats" id="today"></div>
+  <!-- Staff Profile & Live Status Banner -->
+  <div class="profile-banner">
+    <div class="profile-left">
+      <div class="profile-avatar-lg" id="profileInitial">U</div>
+      <div class="profile-details">
+        <h1 id="profileName">Loading...</h1>
+        <div class="profile-meta">
+          <span class="meta-tag" id="profileDept">Department</span>
+          <span class="meta-tag" id="profileEmpId">ID</span>
+          <span class="meta-tag" id="profileFaceStatus">Face</span>
+        </div>
+      </div>
+    </div>
+    <div id="liveStatusContainer">
+      <div class="status-badge-lg out" id="liveStatusBadge">
+        <span class="status-dot"></span>
+        <span id="liveStatusText">Checking status...</span>
+      </div>
+    </div>
+  </div>
 
-  <h2>Report</h2>
-  <div class="tabs" id="tabs"></div>
-  <form class="custom hidden" id="custom">
-    <div><label for="c-from">From</label><input id="c-from" type="date" required></div>
-    <div><label for="c-to">To</label><input id="c-to" type="date" required></div>
-    <button type="submit">Show</button>
-  </form>
-  <div class="stats" id="summary"></div>
-  <div class="scroll" id="days"></div>
-  <p class="muted" id="foot"></p>
+  <!-- Today Section Header -->
+  <div class="section-header">
+    <h2 class="section-title">
+      Today's Overview
+      <span class="section-date-sub" id="todayDate"></span>
+    </h2>
+  </div>
+
+  <!-- 4 Compact Stat Cards -->
+  <div class="stats-grid" id="todayStats">
+    <div class="stat-card">
+      <div class="stat-icon blue">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+      <div class="stat-info">
+        <div class="num" id="statStatus">—</div>
+        <div class="lbl">Current State</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon green">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+      </div>
+      <div class="stat-info">
+        <div class="num" id="statFirstIn">—</div>
+        <div class="lbl">First Check-in</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon purple">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </div>
+      <div class="stat-info">
+        <div class="num" id="statLastOut">—</div>
+        <div class="lbl">Last Check-out</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon amber">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      </div>
+      <div class="stat-info">
+        <div class="num" id="statHours">—</div>
+        <div class="lbl" id="statHoursLbl">Hours Today</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Attendance History & Report Panel -->
+  <div class="report-panel">
+    <div class="report-top-bar">
+      <div class="report-title-group">
+        <h2 id="reportHeading">Attendance History</h2>
+        <p id="reportSubheading">Work days and punch records</p>
+      </div>
+      <div class="pill-tabs" id="pillTabs">
+        <button type="button" class="pill-tab on" data-filter="month">This Month</button>
+        <button type="button" class="pill-tab" data-filter="week">This Week</button>
+        <button type="button" class="pill-tab" data-filter="lastweek">Last Week</button>
+        <button type="button" class="pill-tab" data-filter="lastmonth">Last Month</button>
+        <button type="button" class="pill-tab" data-filter="custom">Custom</button>
+      </div>
+    </div>
+
+    <!-- Custom Range Picker Form -->
+    <form class="custom-form hidden" id="custom">
+      <div class="field">
+        <label for="c-from">From</label>
+        <input id="c-from" type="date" required>
+      </div>
+      <div class="field">
+        <label for="c-to">To</label>
+        <input id="c-to" type="date" required>
+      </div>
+      <button type="submit">Apply Filter</button>
+    </form>
+
+    <!-- Metrics Summary Strip -->
+    <div class="summary-metrics-strip" id="summaryStrip">
+      <div class="metric-cell">
+        <div class="val" id="sumPresent">—</div>
+        <div class="lbl">Days Present</div>
+      </div>
+      <div class="metric-cell">
+        <div class="val" id="sumHours">—</div>
+        <div class="lbl">Total Hours</div>
+      </div>
+      <div class="metric-cell">
+        <div class="val" id="sumAvgDay">—</div>
+        <div class="lbl">Avg / Day</div>
+      </div>
+      <div class="metric-cell">
+        <div class="val" id="sumAvgIn">—</div>
+        <div class="lbl">Avg Check-in</div>
+      </div>
+      <div class="metric-cell">
+        <div class="val" id="sumMissing">—</div>
+        <div class="lbl">Missing Check-outs</div>
+      </div>
+    </div>
+
+    <!-- Table Container -->
+    <div class="scroll-wrap" id="tableContainer">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>First Check-in</th>
+            <th>Last Check-out</th>
+            <th>Work Hours</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="attendanceTableBody">
+          <tr><td colspan="5" class="empty-state">Loading attendance records...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="footer-note" id="footNote">Times shown in local app timezone.</p>
+  </div>
 </main>
 
 <script>
 const API = "{{ api }}";
-const TZ = "{{ tz }}";
+const TZ  = "{{ tz }}";
 const $ = (id) => document.getElementById(id);
 const token = sessionStorage.getItem("token");
 let me = null, today = null, range = "month", custom = null, ranges = {};
@@ -98,38 +902,35 @@ async function api(path) {
   return data;
 }
 
-// Dates are "YYYY-MM-DD" strings in the server's time zone; arithmetic is done in UTC to avoid DST/local-zone drift.
-const toDate = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(Date.UTC(y, m - 1, d)); };
-const iso = (d) => d.toISOString().slice(0, 10);
+// Dates arithmetic
+const toDate  = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(Date.UTC(y, m - 1, d)); };
+const iso     = (d) => d.toISOString().slice(0, 10);
 const addDays = (s, n) => iso(new Date(toDate(s).getTime() + n * 864e5));
-const weekStart = (s) => addDays(s, -((toDate(s).getUTCDay() + 6) % 7));
-const monthStart = (s) => s.slice(0, 8) + "01";
+const weekStart    = (s) => addDays(s, -((toDate(s).getUTCDay() + 6) % 7));
+const monthStart   = (s) => s.slice(0, 8) + "01";
 const prevMonthEnd = (s) => addDays(monthStart(s), -1);
 
 const timeFmt = new Intl.DateTimeFormat([], { timeZone: TZ, hour: "2-digit", minute: "2-digit" });
-const hmFmt = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
-const dayFmt = new Intl.DateTimeFormat([], { timeZone: "UTC", weekday: "short", day: "numeric", month: "short", year: "numeric" });
-const parse = (s) => new Date(/(Z|[+-]\d\d:?\d\d)$/.test(s) ? s : s + "Z");
-const fmtTime = (s) => (s ? timeFmt.format(parse(s)) : "-");
-const fmtDay = (s) => dayFmt.format(toDate(s));
-const fmtDur = (m) => (m == null ? "-" : Math.floor(m / 60) + "h " + String(m % 60).padStart(2, "0") + "m");
+const hmFmt   = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+const dayFmt  = new Intl.DateTimeFormat([], { timeZone: "UTC", weekday: "short", day: "numeric", month: "short", year: "numeric" });
+const parse   = (s) => new Date(/(Z|[+-]\d\d:?\d\d)$/.test(s) ? s : s + "Z");
+const fmtTime = (s) => (s ? timeFmt.format(parse(s)) : "—");
+const fmtDay  = (s) => dayFmt.format(toDate(s));
+const fmtDur  = (m) => (m == null ? "—" : Math.floor(m / 60) + "h " + String(m % 60).padStart(2, "0") + "m");
 const minuteOfDay = (s) => { const [hh, mm] = hmFmt.format(parse(s)).split(":").map(Number); return hh * 60 + mm; };
 
 function defineRanges() {
   const t = today.work_date, ws = weekStart(t), pm = prevMonthEnd(t);
   ranges = {
-    today: { label: "Today", from: t, to: t },
-    week: { label: "This week", from: ws, to: t },
-    lastweek: { label: "Last week", from: addDays(ws, -7), to: addDays(ws, -1) },
-    month: { label: "This month", from: monthStart(t), to: t },
-    lastmonth: { label: "Last month", from: monthStart(pm), to: pm },
-    custom: { label: "Custom", from: custom ? custom.from : monthStart(t), to: custom ? custom.to : t },
+    today:     { label: "Today",        from: t,               to: t },
+    week:      { label: "This Week",    from: ws,               to: t },
+    lastweek:  { label: "Last Week",    from: addDays(ws, -7),  to: addDays(ws, -1) },
+    month:     { label: "This Month",   from: monthStart(t),    to: t },
+    lastmonth: { label: "Last Month",   from: monthStart(pm),   to: pm },
+    custom:    { label: "Custom Range", from: custom ? custom.from : monthStart(t), to: custom ? custom.to : t },
   };
 }
 
-function stat(num, lbl, cls) { return h("div", {}, h("div", { class: "num " + (cls || "") }, num), h("div", { class: "lbl" }, lbl)); }
-
-// Hours run from first check-in to last check-out; for a day still checked in, to now.
 function minutesFor(rec, live) {
   if (!rec || !rec.first_check_in) return null;
   const start = parse(rec.first_check_in);
@@ -137,39 +938,73 @@ function minutesFor(rec, live) {
   return end && end > start ? Math.round((end - start) / 6e4) : null;
 }
 
+function statusChip(status) {
+  const map = {
+    "Checked in":      "chip chip-in",
+    "Complete":        "chip chip-ok",
+    "Missing check-out":"chip chip-warn",
+    "No record":       "chip chip-gray",
+    "Weekend":         "chip chip-gray",
+  };
+  return h("span", { class: map[status] || "chip chip-gray" }, status);
+}
+
+// Render Profile Header & Today Stats
 function renderToday() {
   const t = today, live = t.is_checked_in;
-  const state = live ? "Checked in" : t.last_check_out ? "Checked out" : "Not checked in";
-  $("todayDate").textContent = fmtDay(t.work_date);
-  $("today").replaceChildren(
-    stat(state, "Status"),
-    stat(fmtTime(t.first_check_in), "First check-in"),
-    stat(live ? "-" : fmtTime(t.last_check_out), "Last check-out"),
-    stat(fmtDur(minutesFor(t, live)), live ? "Hours so far" : "Hours today"),
-  );
+  const state = live ? "Checked In" : t.last_check_out ? "Checked Out" : "Not Checked In";
+
+  $("todayDate").textContent = "· " + fmtDay(t.work_date);
+
+  // Live Status Badge in Profile Banner
+  const badge = $("liveStatusBadge");
+  badge.className = "status-badge-lg " + (live ? "in" : "out");
+  $("liveStatusText").textContent = live ? "Currently Checked In" : state;
+
+  // Stat cards
+  $("statStatus").textContent = state;
+  $("statFirstIn").textContent = fmtTime(t.first_check_in);
+  $("statLastOut").textContent = live ? "—" : fmtTime(t.last_check_out);
+  $("statHours").textContent = fmtDur(minutesFor(t, live));
+  $("statHoursLbl").textContent = live ? "Hours (Live)" : "Hours Today";
 }
 
-function renderTabs() {
-  $("tabs").replaceChildren(...Object.entries(ranges).map(([k, r]) =>
-    h("button", { type: "button", class: k === range ? "on" : "", onclick: () => { range = k; renderTabs(); loadReport(); } }, r.label)));
-  $("custom").classList.toggle("hidden", range !== "custom");
-}
-
+// Render Attendance Report Table & Metrics
 async function loadReport() {
-  const r = ranges[range];
+  const r = ranges[range] || ranges["month"];
+  $("reportHeading").textContent = r.label + " Attendance";
+  $("reportSubheading").textContent = "Records from " + r.from + " to " + r.to;
+
   const to = r.to > today.work_date ? today.work_date : r.to;
-  if (r.from > to) { $("summary").replaceChildren(); $("days").replaceChildren(h("p", { class: "muted" }, "Nothing to show for this period yet.")); return; }
+  const tbody = $("attendanceTableBody");
+
+  if (r.from > to) {
+    $("sumPresent").textContent = "0";
+    $("sumHours").textContent = "—";
+    $("sumAvgDay").textContent = "—";
+    $("sumAvgIn").textContent = "—";
+    $("sumMissing").textContent = "0";
+    tbody.replaceChildren(h("tr", {}, h("td", { colspan: "5", class: "empty-state" }, "No records for this period yet.")));
+    return;
+  }
+
   let data;
   try { data = await api("/attendance/me?date_from=" + r.from + "&date_to=" + to); }
-  catch (e) { return say(e.message, true); }
+  catch (e) {
+    say(e.message, true);
+    tbody.replaceChildren(h("tr", {}, h("td", { colspan: "5", class: "empty-state" }, "Error loading records.")));
+    return;
+  }
   say("");
+
   const byDate = new Map(data.items.map((i) => [i.work_date, i]));
   const rows = [];
   let present = 0, total = 0, counted = 0, missing = 0, inSum = 0, inN = 0;
+
   for (let d = to; d >= r.from; d = addDays(d, -1)) {
     const rec = byDate.get(d), isToday = d === today.work_date, live = isToday && today.is_checked_in;
     const dow = toDate(d).getUTCDay();
-    let status = dow === 0 || dow === 6 ? "Weekend" : "No record", cls = "muted", mins = null;
+    let status = dow === 0 || dow === 6 ? "Weekend" : "No record", mins = null;
     if (rec) {
       present++;
       mins = minutesFor(rec, live);
@@ -177,25 +1012,98 @@ async function loadReport() {
       if (rec.first_check_in) { inSum += minuteOfDay(rec.first_check_in); inN++; }
       if (live) status = "Checked in";
       else if (rec.last_check_out) status = "Complete";
-      else { status = "Missing check-out"; cls = "warn"; missing++; }
-      if (status !== "Missing check-out") cls = "";
+      else { status = "Missing check-out"; missing++; }
     } else if (status === "Weekend") { continue; }
-    rows.push(h("tr", {}, h("td", {}, fmtDay(d)), h("td", {}, rec ? fmtTime(rec.first_check_in) : "-"),
-      h("td", {}, rec && !live ? fmtTime(rec.last_check_out) : "-"), h("td", {}, fmtDur(mins)), h("td", { class: cls }, status)));
+
+    rows.push(h("tr", {},
+      h("td", { style: "font-weight:500;" }, fmtDay(d)),
+      h("td", {}, rec ? fmtTime(rec.first_check_in) : "—"),
+      h("td", {}, rec && !live ? fmtTime(rec.last_check_out) : "—"),
+      h("td", { style: "font-weight:500;" }, fmtDur(mins)),
+      h("td", {}, statusChip(status))));
   }
+
   const avgIn = inN ? Math.round(inSum / inN) : null;
-  $("summary").replaceChildren(
-    stat(String(present), "Days present"),
-    stat(fmtDur(counted ? total : null), "Total hours"),
-    stat(fmtDur(counted ? Math.round(total / counted) : null), "Average per day"),
-    stat(avgIn == null ? "-" : String(Math.floor(avgIn / 60)).padStart(2, "0") + ":" + String(avgIn % 60).padStart(2, "0"), "Average check-in"),
-    stat(String(missing), "Missing check-outs", missing ? "warn" : ""),
-  );
-  $("days").replaceChildren(rows.length ? h("table", {}, h("thead", {}, h("tr", {},
-    ...["Date", "First check-in", "Last check-out", "Hours", "Status"].map((x) => h("th", {}, x)))), h("tbody", {}, rows))
-    : h("p", { class: "muted" }, "Nothing to show for this period."));
-  $("foot").textContent = "Times are shown in " + TZ + ". Hours run from your first check-in to your last check-out of the day. Weekends are hidden unless you have a record.";
+  $("sumPresent").textContent = String(present);
+  $("sumHours").textContent = fmtDur(counted ? total : null);
+  $("sumAvgDay").textContent = fmtDur(counted ? Math.round(total / counted) : null);
+  $("sumAvgIn").textContent = avgIn == null ? "—" : String(Math.floor(avgIn / 60)).padStart(2, "0") + ":" + String(avgIn % 60).padStart(2, "0");
+  const missingEl = $("sumMissing");
+  missingEl.textContent = String(missing);
+  missingEl.className = "val" + (missing ? " warn" : "");
+
+  if (rows.length) {
+    tbody.replaceChildren(...rows);
+  } else {
+    tbody.replaceChildren(h("tr", {}, h("td", { colspan: "5", class: "empty-state" }, "No records found for this period.")));
+  }
+
+  $("footNote").textContent = "Times displayed in " + TZ + ". Work hours calculate from first check-in to last check-out.";
 }
+
+// Sync active tabs in sidebar & pills
+function syncActiveState(r) {
+  range = r;
+  // Sync sidebar
+  document.querySelectorAll("#nav a").forEach((a) => {
+    a.classList.toggle("on", a.dataset.range === r || (r === "month" && a.dataset.range === "today-overview"));
+  });
+  // Sync pill tabs
+  document.querySelectorAll(".pill-tab").forEach((btn) => {
+    btn.classList.toggle("on", btn.dataset.filter === r);
+  });
+  // Toggle custom form
+  $("custom").classList.toggle("hidden", r !== "custom");
+}
+
+function setRange(r) {
+  if (r === "today-overview") r = "month";
+  syncActiveState(r);
+  loadReport();
+  closeDrawer();
+}
+
+// Drawer controls for mobile
+const menuBtn = $("menu-toggle");
+const sidebar = $("sidebar");
+const backdrop = $("sidebar-backdrop");
+
+function toggleDrawer() {
+  sidebar.classList.toggle("open");
+  backdrop.classList.toggle("open");
+}
+function closeDrawer() {
+  sidebar.classList.remove("open");
+  backdrop.classList.remove("open");
+}
+menuBtn.addEventListener("click", toggleDrawer);
+backdrop.addEventListener("click", closeDrawer);
+
+// Sidebar Nav Clicks
+document.querySelectorAll("#nav a[data-range]").forEach((a) => {
+  a.addEventListener("click", (e) => {
+    e.preventDefault();
+    setRange(a.dataset.range);
+  });
+});
+
+// Pill Tab Clicks
+document.querySelectorAll(".pill-tab").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    setRange(btn.dataset.filter);
+  });
+});
+
+// Custom Range Form Submission
+$("custom").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const from = $("c-from").value, to = $("c-to").value;
+  if (from > to) return say("'From' date cannot be after 'To' date.", true);
+  if ((toDate(to) - toDate(from)) / 864e5 > 366) return say("Range cannot exceed 366 days.", true);
+  custom = { from, to };
+  defineRanges();
+  loadReport();
+});
 
 async function loadToday() {
   today = await api("/attendance/me/today");
@@ -204,29 +1112,43 @@ async function loadToday() {
 }
 
 async function refresh() {
-  try { await loadToday(); renderTabs(); await loadReport(); }
-  catch (e) { say(e.message, true); }
+  try {
+    await loadToday();
+    await loadReport();
+  } catch (e) { say(e.message, true); }
 }
-
-$("custom").addEventListener("submit", (e) => {
-  e.preventDefault();
-  const from = $("c-from").value, to = $("c-to").value;
-  if (from > to) return say("'From' must not be after 'To'.", true);
-  if ((toDate(to) - toDate(from)) / 864e5 > 366) return say("Choose a range of at most 366 days.", true);
-  custom = { from, to }; defineRanges(); loadReport();
-});
 
 (async function init() {
   try {
     me = await api("/users/me");
-    if (me.role === "admin") return location.replace("/admin");
+    if (me.role === "admin")  return location.replace("/admin");
     if (me.role === "system") return location.replace("/kiosk");
-    const bits = [me.full_name, me.department && me.department.name, me.employee_id && "ID " + me.employee_id].filter(Boolean);
-    $("who").textContent = bits.join(" · ");
+
+    // Populate Profile Banner
+    const initial = (me.full_name || me.username || "U").charAt(0).toUpperCase();
+    $("avatarInitial").textContent = initial;
+    $("profileInitial").textContent = initial;
+    $("profileName").textContent = me.full_name || me.username || "Staff Member";
+    $("who").textContent = me.full_name;
+
+    $("profileDept").textContent = me.department ? me.department.name : "General";
+    $("profileEmpId").textContent = me.employee_id ? "ID: " + me.employee_id : "No ID";
+    $("profileFaceStatus").textContent = me.face_enrolled ? "✓ Face Enrolled" : "⚠ Face Setup Required";
+    $("profileFaceStatus").style.color = me.face_enrolled ? "var(--success)" : "var(--warn)";
+
     if (!me.face_enrolled) {
-      $("notice").replaceChildren("Face recognition is not set up yet, so you cannot check in at the kiosk. ", h("a", { href: "/?enroll=1" }, "Set it up"));
+      const notice = $("notice");
+      notice.replaceChildren(
+        "Face recognition is not set up yet — kiosk check-in won't recognize you. ",
+        h("a", { href: "/?enroll=1" }, "Set up your face now")
+      );
     }
-    await refresh();
+
+    await loadToday();
+    syncActiveState("month");
+    await loadReport();
+
+    // Auto-refresh every 60s
     setInterval(() => { if (!document.hidden) refresh(); }, 60000);
   } catch (e) { say(e.message, true); }
 })();

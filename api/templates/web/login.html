@@ -3,119 +3,863 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Staff Attendance</title>
+<title>Faculty Attendance</title>
+<link rel="icon" href="/static/img/image.png" type="image/png">
 <style>
-  * { box-sizing: border-box; }
-  body { margin: 0; font: 15px/1.6 system-ui, -apple-system, "Segoe UI", Arial, sans-serif; background: #fff; color: #111; }
-  main { max-width: 340px; margin: 12vh auto 48px; padding: 0 20px; }
-  h1 { font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #666; margin: 0 0 40px; }
-  h2 { font-size: 22px; font-weight: 600; margin: 0 0 24px; }
-  .card { border: 0; padding: 0; }
-  label { display: block; margin: 20px 0 2px; font-size: 12px; color: #666; }
-  input, select { width: 100%; padding: 8px 0; font: inherit; border: 0; border-bottom: 1px solid #ccc; border-radius: 0; background: transparent; color: inherit; outline: 0; }
-  input:focus, select:focus { border-bottom-color: #111; }
-  button { padding: 9px 18px; font: inherit; border: 1px solid #111; border-radius: 0; background: #111; color: #fff; cursor: pointer; }
-  button.secondary { background: #fff; color: #111; border-color: #ccc; }
-  button:disabled { opacity: .4; cursor: default; }
-  .row { display: flex; gap: 8px; margin-top: 32px; flex-wrap: wrap; }
-  .links { margin-top: 24px; font-size: 13px; }
-  .links a { color: #666; cursor: pointer; margin-right: 16px; text-decoration: underline; }
-  .msg { margin-top: 16px; font-size: 13px; min-height: 1.2em; color: #666; }
-  .msg.err { color: #b42318; }
-  .msg.ok { color: #1a7f37; }
-  .hidden { display: none; }
-  video { width: 100%; background: #f2f2f2; }
-  .shots { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 8px; }
-  .shots img { width: 56px; height: 42px; object-fit: cover; }
-  dialog { max-width: 380px; border: 1px solid #ccc; border-radius: 0; padding: 28px; color: #111; }
-  dialog h2 { font-size: 18px; margin-bottom: 12px; }
-  dialog p { margin: 0 0 8px; color: #444; }
-  dialog::backdrop { background: rgba(255, 255, 255, .85); }
+  *, *::before, *::after { box-sizing: border-box; }
+  :root {
+    --blue: #1a73e8;
+    --blue-hover: #1558b0;
+    --surface: #ffffff;
+    --bg: #f1f3f4;
+    --border: #dadce0;
+    --text: #202124;
+    --muted: #5f6368;
+    --danger: #d93025;
+    --success: #188038;
+    --warn: #e37400;
+    --radius: 8px;
+    --shadow: 0 1px 3px rgba(60,64,67,.15), 0 2px 8px rgba(60,64,67,.1);
+  }
+  body {
+    margin: 0;
+    font: 14px/1.6 "Google Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+  }
+  main {
+    width: 100%;
+    max-width: 460px;
+  }
+  .brand {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .brand-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    background: var(--blue);
+    border-radius: 12px;
+    margin-bottom: 12px;
+  }
+  .brand-icon svg { display: block; }
+  .brand h1 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .brand p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* Multi-step progress indicator for Sign up flow */
+  .stepper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding: 0 4px;
+  }
+  .stepper.hidden { display: none !important; }
+  .step-node {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+  }
+  .step-circle {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    background: var(--surface);
+    color: var(--muted);
+    font-weight: 600;
+    flex-shrink: 0;
+    transition: all .2s ease;
+  }
+  .step-node.active {
+    color: var(--blue);
+    font-weight: 600;
+  }
+  .step-node.active .step-circle {
+    background: var(--blue);
+    color: #fff;
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(26,115,232,.18);
+  }
+  .step-node.done {
+    color: var(--success);
+  }
+  .step-node.done .step-circle {
+    background: #e6f4ea;
+    border-color: var(--success);
+    color: var(--success);
+  }
+  .step-connector {
+    flex: 1;
+    height: 2px;
+    background: var(--border);
+    margin: 0 8px;
+  }
+  .step-connector.done {
+    background: var(--success);
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px 30px;
+    box-shadow: var(--shadow);
+  }
+  .card.hidden { display: none; }
+  
+  .card-header {
+    margin-bottom: 20px;
+  }
+  .step-tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--blue);
+    margin-bottom: 6px;
+  }
+  h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .card-desc {
+    margin: 6px 0 0;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: .025em;
+  }
+  .req {
+    color: var(--danger);
+  }
+  .field { margin-bottom: 16px; }
+  
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  @media (max-width: 480px) {
+    .form-row {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+  }
+
+  .input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+  }
+  .input-wrap input {
+    padding-right: 40px;
+  }
+  .pwd-toggle {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    padding: 6px;
+    color: var(--muted);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    line-height: 0;
+  }
+  .pwd-toggle:hover {
+    color: var(--text);
+    background: rgba(32,33,36,.06);
+  }
+
+  .field-hint {
+    display: block;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 3px;
+  }
+  .field-hint-inline {
+    font-weight: 400;
+    color: var(--muted);
+  }
+
+  .field-error {
+    color: var(--danger);
+    font-size: 11.5px;
+    margin-top: 4px;
+    display: none;
+    line-height: 1.4;
+  }
+  .field-error:not(:empty) {
+    display: block;
+  }
+  .input-invalid {
+    border-color: var(--danger) !important;
+    box-shadow: 0 0 0 3px rgba(217, 48, 37, 0.15) !important;
+  }
+
+  input, select {
+    display: block;
+    width: 100%;
+    padding: 9px 12px;
+    font: inherit;
+    font-size: 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  input:focus, select:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(26,115,232,.15);
+  }
+
+  .actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  button {
+    padding: 9px 20px;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background .15s, box-shadow .15s, border-color .15s;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  button[type="submit"], button.primary {
+    background: var(--blue);
+    color: #fff;
+    border-color: var(--blue);
+  }
+  button[type="submit"]:hover, button.primary:hover {
+    background: var(--blue-hover);
+    border-color: var(--blue-hover);
+    box-shadow: 0 1px 4px rgba(26,115,232,.35);
+  }
+  button.secondary {
+    background: transparent;
+    color: var(--text);
+    border-color: var(--border);
+  }
+  button.secondary:hover {
+    background: rgba(32,33,36,.04);
+    border-color: #b0b4b8;
+  }
+  button:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+  
+  .links {
+    margin-top: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding-top: 14px;
+    border-top: 1px solid #f1f3f4;
+  }
+  .links a {
+    font-size: 13px;
+    color: var(--blue);
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .links a:hover { text-decoration: underline; }
+
+  .msg {
+    margin-top: 12px;
+    font-size: 13px;
+    min-height: 1.2em;
+    border-radius: 6px;
+    padding: 8px 12px;
+    display: none;
+  }
+  .msg:not(:empty) { display: block; }
+  .msg.err  { background: #fce8e6; color: var(--danger); }
+  .msg.ok   { background: #e6f4ea; color: var(--success); }
+  .msg.warn { background: #fff3e0; color: #b45309; }
+  .hidden { display: none !important; }
+
+  /* Instruction points styling */
+  .rule-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .rule-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #f8f9fa;
+    border: 1px solid var(--border);
+  }
+  .rule-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #e8f0fe;
+    color: var(--blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .rule-content h4 {
+    margin: 0 0 2px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .rule-content p {
+    margin: 0;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+
+  /* Notice alert banners */
+  .notice-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: #e8f0fe;
+    border: 1px solid #c5d8fb;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #174ea6;
+    margin-bottom: 14px;
+  }
+  .notice-banner.highlight {
+    background: #e6f4ea;
+    border-color: #ceead6;
+    color: #137333;
+    font-weight: 500;
+  }
+  .notice-banner svg {
+    flex-shrink: 0;
+  }
+
+  /* Camera preview & guide */
+  .camera-box {
+    position: relative;
+    width: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #202124;
+    aspect-ratio: 4/3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.1);
+    transition: filter 0.08s ease;
+  }
+  .camera-box.flash {
+    filter: brightness(2.2);
+  }
+  video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+    display: block;
+  }
+  .face-guide-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 58%;
+    height: 72%;
+    border: 2px dashed rgba(255,255,255,.8);
+    border-radius: 50%;
+    pointer-events: none;
+    box-shadow: 0 0 0 9999px rgba(0,0,0,.25);
+  }
+  .face-guide-overlay::after {
+    content: "Align Face Here";
+    position: absolute;
+    bottom: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255,255,255,.9);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    white-space: nowrap;
+    text-shadow: 0 1px 3px rgba(0,0,0,.8);
+  }
+
+  /* Live progress pill */
+  .capture-status-bar {
+    margin-top: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .badge.warn { background: #fff3e0; color: #b45309; }
+  .badge.ok   { background: #e6f4ea; color: var(--success); }
+  .badge.info { background: #e8f0fe; color: var(--blue); }
+
+  /* Shots thumbnails */
+  .shots {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+    max-height: 125px;
+    overflow-y: auto;
+    padding: 4px 2px;
+  }
+  .shot-item {
+    position: relative;
+    width: 64px;
+    height: 48px;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1.5px solid var(--border);
+    flex-shrink: 0;
+    background: #000;
+  }
+  .shot-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .shot-badge {
+    position: absolute;
+    bottom: 2px;
+    left: 2px;
+    background: rgba(0,0,0,.75);
+    color: #fff;
+    font-size: 9px;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-weight: 600;
+  }
+  .shot-del {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: rgba(0,0,0,.7);
+    color: #fff;
+    border: none;
+    font-size: 11px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    transition: background .15s;
+  }
+  .shot-del:hover {
+    background: var(--danger);
+  }
+
+  dialog {
+    max-width: 380px;
+    width: 92vw;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    box-shadow: var(--shadow);
+    color: var(--text);
+  }
+  dialog::backdrop { background: rgba(32,33,36,.5); }
+  dialog h2 { font-size: 18px; margin: 0 0 12px; }
+  dialog p { margin: 0 0 12px; color: var(--muted); font-size: 14px; }
 </style>
 </head>
 <body>
+<header style="position: absolute; top: 16px; right: 20px; z-index: 100;">
+  <a href="/about" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: var(--muted); text-decoration: none; padding: 6px 14px; border-radius: 18px; border: 1px solid var(--border); background: var(--surface); box-shadow: 0 1px 3px rgba(60,64,67,.08); transition: all .15s;" onmouseover="this.style.borderColor='var(--blue)'; this.style.color='var(--blue)'" onmouseout="this.style.borderColor='var(--border)'; this.style.color='var(--muted)'">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+    Our Story / About
+  </a>
+</header>
 <main>
-  <h1>Staff Attendance</h1>
- 
+  <div class="brand">
+    <div class="brand-icon" style="background:#fff; border:1px solid var(--border); box-shadow:0 1px 3px rgba(60,64,67,.12); padding:6px;">
+      <img src="/static/img/image.png" alt="Faculty Attendance System Logo" style="width:100%; height:100%; object-fit:contain; display:block;">
+    </div>
+    <h1>Faculty Attendance</h1>
+    <p>Facial recognition time &amp; attendance</p>
+  </div>
+
+  <!-- Stepper Navigation for Sign-up & Enrollment flow -->
+  <div class="stepper hidden" id="stepper">
+    <div class="step-node active" id="stepNode1">
+      <div class="step-circle" id="stepCircle1">1</div>
+      <span>Account</span>
+    </div>
+    <div class="step-connector" id="stepConn1"></div>
+    <div class="step-node" id="stepNode2">
+      <div class="step-circle" id="stepCircle2">2</div>
+      <span>Guidelines</span>
+    </div>
+    <div class="step-connector" id="stepConn2"></div>
+    <div class="step-node" id="stepNode3">
+      <div class="step-circle" id="stepCircle3">3</div>
+      <span>Capture (10 Photos)</span>
+    </div>
+  </div>
+
+  <!-- Step 0: Sign In -->
   <section id="login" class="card">
-    <h2>Log in</h2>
-    <form id="loginForm">
-      <label for="l-user">User name</label>
-      <input id="l-user" autocomplete="username" required>
-      <label for="l-pass">Password</label>
-      <input id="l-pass" type="password" autocomplete="current-password" required>
-      <div class="row"><button type="submit">Log in</button></div>
+    <div class="card-header">
+      <h2>Sign in</h2>
+      <p class="card-desc">Access your attendance records and check-in portal</p>
+    </div>
+    <form id="loginForm" novalidate>
+      <div class="field">
+        <label for="l-user">SIET Email Address</label>
+        <input id="l-user" type="email" autocomplete="username" required placeholder="username@siet.ac.in">
+        <div class="field-error" id="l-user-err"></div>
+      </div>
+      <div class="field">
+        <label for="l-pass">Password</label>
+        <div class="input-wrap">
+          <input id="l-pass" type="password" autocomplete="current-password" required placeholder="Enter your password">
+          <button type="button" class="pwd-toggle" data-target="l-pass" aria-label="Toggle password visibility" tabindex="-1">
+            <svg class="eye-show" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="eye-hide hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          </button>
+        </div>
+        <div class="field-error" id="l-pass-err"></div>
+      </div>
+      <div class="actions"><button type="submit">Sign in</button></div>
       <div class="msg" id="loginMsg"></div>
     </form>
-    <div class="links"><a data-go="signup">Sign up</a><a data-go="forgot">Reset password</a></div>
+    <div class="links">
+      <a data-go="signup">Create new staff account</a>
+      <a data-go="forgot">Forgot password?</a>
+    </div>
   </section>
 
+  <!-- Step 1: Sign Up Account Details -->
   <section id="signup" class="card hidden">
-    <h2>Sign up</h2>
-    <form id="signupForm">
-      <label for="s-user">Staff user name</label>
-      <input id="s-user" autocomplete="username" pattern="[A-Za-z0-9._\-]{3,32}" title="3-32 letters, digits, . _ -" required>
-      <label for="s-emp">Employee ID</label>
-      <input id="s-emp" pattern="[A-Za-z0-9_\-]{1,32}" title="Letters, digits, _ -" required>
-      <label for="s-dept">Department</label>
-      <select id="s-dept" required><option value="">Select department</option></select>
-      <label for="s-email">Email</label>
-      <input id="s-email" type="email" autocomplete="email" required>
-      <label for="s-pass">Password (min 10 characters)</label>
-      <input id="s-pass" type="password" autocomplete="new-password" minlength="10" required>
-      <div class="row"><button type="submit">Continue</button></div>
+    <div class="card-header">
+      <span class="step-tag">Step 1 of 3</span>
+      <h2>Staff Account Details</h2>
+      <p class="card-desc">Enter your information to register your staff account</p>
+    </div>
+    <form id="signupForm" novalidate>
+      <div class="form-row">
+        <div class="field">
+          <label for="s-first">First Name <span class="req">*</span></label>
+          <input id="s-first" type="text" autocomplete="given-name" required placeholder="First name">
+          <div class="field-error" id="s-first-err"></div>
+        </div>
+        <div class="field">
+          <label for="s-last">Last Name <span class="req">*</span></label>
+          <input id="s-last" type="text" autocomplete="family-name" required placeholder="Last name">
+          <div class="field-error" id="s-last-err"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="s-email">SIET Email Address <span class="req">*</span></label>
+        <input id="s-email" type="email" autocomplete="email" required placeholder="name@siet.ac.in">
+        <span class="field-hint">Institutional email ending in @siet.ac.in is required</span>
+        <div class="field-error" id="s-email-err"></div>
+      </div>
+
+      <div class="field">
+        <label for="s-mobile">Mobile Number <span class="req">*</span></label>
+        <input id="s-mobile" type="tel" autocomplete="tel" required placeholder="10-digit number (e.g. 9876543210)">
+        <div class="field-error" id="s-mobile-err"></div>
+      </div>
+
+      <div class="field">
+        <label for="s-pass">Password <span class="req">*</span> <span class="field-hint-inline">(min 10 characters)</span></label>
+        <div class="input-wrap">
+          <input id="s-pass" type="password" autocomplete="new-password" minlength="10" required placeholder="Enter password (min 10 chars)">
+          <button type="button" class="pwd-toggle" data-target="s-pass" aria-label="Toggle password visibility" tabindex="-1">
+            <svg class="eye-show" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="eye-hide hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          </button>
+        </div>
+        <div class="field-error" id="s-pass-err"></div>
+      </div>
+
+      <div class="field">
+        <label for="s-pass-confirm">Confirm Password <span class="req">*</span></label>
+        <div class="input-wrap">
+          <input id="s-pass-confirm" type="password" autocomplete="new-password" minlength="10" required placeholder="Re-enter password">
+          <button type="button" class="pwd-toggle" data-target="s-pass-confirm" aria-label="Toggle password visibility" tabindex="-1">
+            <svg class="eye-show" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="eye-hide hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          </button>
+        </div>
+        <div class="field-error" id="s-pass-confirm-err"></div>
+      </div>
+
+      <div class="actions">
+        <button type="submit">Continue to Face Setup &rarr;</button>
+      </div>
       <div class="msg" id="signupMsg"></div>
     </form>
-    <div class="links"><a data-go="login">Back to log in</a></div>
+    <div class="links">
+      <a data-go="login">&larr; Already have an account? Sign in</a>
+    </div>
   </section>
 
+  <!-- Step 2: Face Capture Instructions & Guidelines -->
+  <section id="instructions" class="card hidden">
+    <div class="card-header">
+      <span class="step-tag">Step 2 of 3</span>
+      <h2>Face Capture Guidelines</h2>
+      <p class="card-desc">Review these requirements to ensure reliable kiosk recognition</p>
+    </div>
+
+    <div class="notice-banner highlight">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+      <span>Exactly <b>10 photos required</b> &bull; Only <b>1 person</b> in camera frame</span>
+    </div>
+
+    <div class="rule-list">
+      <div class="rule-item">
+        <div class="rule-icon">&#128100;</div>
+        <div class="rule-content">
+          <h4>Only ONE Face in the Frame</h4>
+          <p>Ensure no other people are in background or standing beside you. Photos with multiple faces will be rejected.</p>
+        </div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-icon">&#128248;</div>
+        <div class="rule-content">
+          <h4>Collect Exactly 10 Photos</h4>
+          <p>Take exactly 10 photos with slight head angle variations (facing forward, slight turn left, right, up, down).</p>
+        </div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-icon">&#128161;</div>
+        <div class="rule-content">
+          <h4>Good and Even Lighting</h4>
+          <p>Face toward the light source. Avoid dark shadows or strong backlight (e.g. standing directly in front of an unshaded window).</p>
+        </div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-icon">&#128083;</div>
+        <div class="rule-content">
+          <h4>Unobstructed Face</h4>
+          <p>Remove sunglasses, hats, caps, or masks. Keep your eyes open and hold a natural, neutral facial expression.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button type="button" id="toCapture" class="primary">Open Camera &amp; Start Capture &rarr;</button>
+      <button type="button" id="skipEnroll" class="secondary">Set up later</button>
+    </div>
+    
+    <div class="links">
+      <a data-go="signup">&larr; Back to account details</a>
+      <a data-go="login">Sign in</a>
+    </div>
+  </section>
+
+  <!-- Step 3: Photo Capture (Strictly 10 Photos) -->
+  <section id="capture" class="card hidden">
+    <div class="card-header">
+      <span class="step-tag">Step 3 of 3</span>
+      <h2>Capture Face Photos</h2>
+      <p class="card-desc">Exactly 10 photos required &bull; Only 1 face in the frame</p>
+    </div>
+
+    <div class="notice-banner">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span>Hold still and rotate your head slightly between captures. Exactly 10 photos are needed.</span>
+    </div>
+
+    <div class="camera-box" id="cameraBox">
+      <video id="video" autoplay playsinline muted></video>
+      <div class="face-guide-overlay"></div>
+    </div>
+
+    <div class="capture-status-bar">
+      <div id="capCount">0 / 10 photos</div>
+      <div style="font-size:11px;color:var(--muted)">Target: Exactly 10 photos</div>
+    </div>
+
+    <div class="shots" id="shots"></div>
+
+    <div class="actions">
+      <button type="button" id="snap" class="primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+        Capture Photo
+      </button>
+      <button type="button" id="clear" class="secondary">Retake all</button>
+      <button type="button" id="uploadBtn" class="secondary" title="Upload photos from device if camera is unavailable">Upload file</button>
+      <input type="file" id="fileInput" accept="image/jpeg,image/png" multiple class="hidden">
+      <button type="button" id="submit" disabled>Submit (0/10)</button>
+    </div>
+    
+    <div class="msg" id="capMsg"></div>
+
+    <div class="links">
+      <a id="backToInstructions">&larr; Back to guidelines</a>
+      <a id="skipFromCapture" style="color:var(--muted)">Skip setup for now</a>
+    </div>
+  </section>
+
+  <!-- Forgot Password -->
   <section id="forgot" class="card hidden">
-    <h2>Reset password</h2>
-    <form id="forgotForm">
-      <label for="f-user">User name or email</label>
-      <input id="f-user" required>
-      <div class="row"><button type="submit">Send reset link</button></div>
+    <div class="card-header">
+      <h2>Reset password</h2>
+      <p class="card-desc">Enter your registered SIET email address</p>
+    </div>
+    <form id="forgotForm" novalidate>
+      <div class="field">
+        <label for="f-user">SIET Email Address</label>
+        <input id="f-user" type="email" required placeholder="username@siet.ac.in">
+        <div class="field-error" id="f-user-err"></div>
+      </div>
+      <div class="actions"><button type="submit">Send reset link</button></div>
       <div class="msg" id="forgotMsg"></div>
     </form>
-    <div class="links"><a data-go="login">Back to log in</a></div>
+    <div class="links"><a data-go="login">&larr; Back to sign in</a></div>
   </section>
 
+  <!-- Set New Password -->
   <section id="reset" class="card hidden">
-    <h2>Set a new password</h2>
-    <form id="resetForm">
-      <label for="r-pass">New password (min 10 characters)</label>
-      <input id="r-pass" type="password" autocomplete="new-password" minlength="10" required>
-      <div class="row"><button type="submit">Change password</button></div>
+    <div class="card-header">
+      <h2>Set new password</h2>
+      <p class="card-desc">Choose a strong password with at least 10 characters</p>
+    </div>
+    <form id="resetForm" novalidate>
+      <div class="field">
+        <label for="r-pass">New password <span class="field-hint-inline">(min 10 characters)</span></label>
+        <div class="input-wrap">
+          <input id="r-pass" type="password" autocomplete="new-password" minlength="10" required placeholder="Enter new password">
+          <button type="button" class="pwd-toggle" data-target="r-pass" aria-label="Toggle password visibility" tabindex="-1">
+            <svg class="eye-show" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="eye-hide hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          </button>
+        </div>
+        <div class="field-error" id="r-pass-err"></div>
+      </div>
+      <div class="actions"><button type="submit">Change password</button></div>
       <div class="msg" id="resetMsg"></div>
     </form>
-    <div class="links"><a data-go="login">Back to log in</a></div>
+    <div class="links"><a data-go="login">&larr; Back to sign in</a></div>
   </section>
 
-  <section id="capture" class="card hidden">
-    <h2>Face capture</h2>
-    <video id="video" autoplay playsinline muted></video>
-    <div class="shots" id="shots"></div>
-    <div class="msg" id="capCount"></div>
-    <div class="row">
-      <button type="button" id="snap">Capture</button>
-      <button type="button" id="clear" class="secondary">Retake all</button>
-      <button type="button" id="submit" disabled>Submit</button>
-    </div>
-    <div class="msg" id="capMsg"></div>
-  </section>
-
+  <!-- Complete / Done -->
   <section id="done" class="card hidden">
-    <h2 id="doneTitle"></h2>
-    <p id="doneText"></p>
-    <div class="row"><button type="button" id="toPortal">View my attendance</button><button type="button" id="startEnroll" class="secondary hidden">Set up face recognition</button><button type="button" id="logout" class="secondary">Log out</button></div>
+    <div class="card-header">
+      <h2 id="doneTitle">Registration Complete</h2>
+      <p id="doneText" style="color:var(--muted);margin:8px 0 0;"></p>
+    </div>
+    <div class="actions">
+      <button type="button" id="toPortal" class="primary">View my attendance</button>
+      <button type="button" id="startEnroll" class="secondary hidden">Set up face recognition</button>
+      <button type="button" id="logout" class="secondary">Sign out</button>
+    </div>
   </section>
 </main>
 
+<footer style="margin-top: 24px; text-align: center; font-size: 12px; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 6px;">
+  <div style="display:flex; align-items:center; justify-content:center; gap:8px;">
+    <img src="/static/img/image.png" alt="Logo" style="width:16px; height:16px; object-fit:contain;">
+    <a href="/about" style="color: var(--blue); text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 4px;">
+      Our Story &amp; About Faculty Attendance
+    </a>
+    <span style="color: var(--border);">•</span>
+    <a href="https://siet.ac.in" target="_blank" rel="noopener noreferrer" style="color: var(--muted); text-decoration: none;">Sri Shakthi Institute of Engineering &amp; Technology</a>
+  </div>
+  <div style="font-size: 11px; color: #9aa0a6;">&copy; 2026 Smart Faculty Attendance System</div>
+</footer>
+
 <dialog id="consent">
-  <h2>Face data</h2>
-  <p>We'll capture a few images of your face to train your data in the database. Your data is securely stored in the server.</p>
+  <h2>Face data consent</h2>
+  <p>We'll capture exactly 10 images of your face to set up recognition in the system. Your biometric data is securely stored.</p>
   <p>Do you agree to proceed?</p>
-  <div class="row">
+  <div class="actions">
     <button type="button" id="agree">I agree</button>
     <button type="button" id="decline" class="secondary">Not now</button>
   </div>
@@ -126,16 +870,130 @@
 <script>
 const API = "{{ api }}";
 const $ = (id) => document.getElementById(id);
-const SECTIONS = ["login", "signup", "forgot", "reset", "capture", "done"];
-let token = null, me = null, info = { min_images: 3, max_images: 5 }, shots = [], stream = null;
+const SECTIONS = ["login", "signup", "instructions", "capture", "forgot", "reset", "done"];
+const MIN_CAPTURE = 10;
+const MAX_CAPTURE = 10;
+const SIET_DOMAIN_REGEX = /^[a-zA-Z0-9._%+-]+@siet\.ac\.in$/i;
+const MOBILE_REGEX = /^(?:\+?91|0)?[6-9]\d{9}$/;
+
+let token = null, me = null, info = { min_images: MIN_CAPTURE, max_images: MAX_CAPTURE }, shots = [], stream = null;
 const resetToken = new URLSearchParams(location.search).get("token");
 
-function show(name) {
-  SECTIONS.forEach((s) => $(s).classList.toggle("hidden", s !== name));
-  if (name !== "capture") stopCamera();
+// Safe DOM helper function: creates element with attributes and children
+function h(tag, props, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props || {})) {
+    if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if (v !== false && v != null) e.setAttribute(k, v === true ? "" : v);
+  }
+  e.append(...kids.flat().filter((x) => x != null && x !== false));
+  return e;
 }
-function say(id, text, kind) { const e = $(id); e.textContent = text || ""; e.className = "msg " + (kind || ""); }
-document.querySelectorAll("[data-go]").forEach((a) => a.addEventListener("click", () => show(a.dataset.go)));
+
+// Password toggle helper
+document.querySelectorAll(".pwd-toggle").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const targetId = btn.getAttribute("data-target");
+    const input = $(targetId);
+    if (!input) return;
+    const isPassword = input.type === "password";
+    input.type = isPassword ? "text" : "password";
+    const eyeShow = btn.querySelector(".eye-show");
+    const eyeHide = btn.querySelector(".eye-hide");
+    if (eyeShow && eyeHide) {
+      eyeShow.classList.toggle("hidden", isPassword);
+      eyeHide.classList.toggle("hidden", !isPassword);
+    }
+  });
+});
+
+function setFieldError(fieldId, errId, msg) {
+  const input = $(fieldId);
+  const errEl = $(errId);
+  if (errEl) errEl.textContent = msg || "";
+  if (input) {
+    if (msg) input.classList.add("input-invalid");
+    else input.classList.remove("input-invalid");
+  }
+}
+
+function clearAllErrors() {
+  document.querySelectorAll(".field-error").forEach((el) => { el.textContent = ""; });
+  document.querySelectorAll(".input-invalid").forEach((el) => { el.classList.remove("input-invalid"); });
+}
+
+// Live error clear on input
+["s-first", "s-last", "s-email", "s-mobile", "s-pass", "s-pass-confirm"].forEach((id) => {
+  const el = $(id);
+  if (el) {
+    el.addEventListener("input", () => {
+      setFieldError(id, id + "-err", "");
+      say("signupMsg", "");
+    });
+  }
+});
+["l-user", "l-pass"].forEach((id) => {
+  const el = $(id);
+  if (el) {
+    el.addEventListener("input", () => {
+      setFieldError(id, id + "-err", "");
+      say("loginMsg", "");
+    });
+  }
+});
+
+function updateStepper(step) {
+  const stepper = $("stepper");
+  if (!step) {
+    stepper.classList.add("hidden");
+    return;
+  }
+  stepper.classList.remove("hidden");
+  
+  const node1 = $("stepNode1"), circle1 = $("stepCircle1"), conn1 = $("stepConn1");
+  const node2 = $("stepNode2"), circle2 = $("stepCircle2"), conn2 = $("stepConn2");
+  const node3 = $("stepNode3"), circle3 = $("stepCircle3");
+
+  // Step 1
+  node1.className = step === 1 ? "step-node active" : (step > 1 ? "step-node done" : "step-node");
+  circle1.textContent = step > 1 ? "✓" : "1";
+  conn1.className = step > 1 ? "step-connector done" : "step-connector";
+
+  // Step 2
+  node2.className = step === 2 ? "step-node active" : (step > 2 ? "step-node done" : "step-node");
+  circle2.textContent = step > 2 ? "✓" : "2";
+  conn2.className = step > 2 ? "step-connector done" : "step-connector";
+
+  // Step 3
+  node3.className = step === 3 ? "step-node active" : "step-node";
+  circle3.textContent = "3";
+}
+
+function show(name) {
+  clearAllErrors();
+  SECTIONS.forEach((s) => {
+    const el = $(s);
+    if (el) el.classList.toggle("hidden", s !== name);
+  });
+  if (name !== "capture") stopCamera();
+
+  // Handle Stepper state
+  if (name === "signup") updateStepper(1);
+  else if (name === "instructions") updateStepper(2);
+  else if (name === "capture") updateStepper(3);
+  else updateStepper(null);
+}
+
+function say(id, text, kind) {
+  const e = $(id);
+  if (!e) return;
+  e.textContent = text || "";
+  e.className = "msg " + (kind || "");
+}
+
+document.querySelectorAll("[data-go]").forEach((a) => {
+  a.addEventListener("click", () => show(a.dataset.go));
+});
 
 async function api(path, { method = "GET", body, auth } = {}) {
   const headers = {};
@@ -153,14 +1011,6 @@ async function api(path, { method = "GET", body, auth } = {}) {
   return data;
 }
 
-async function loadDepartments() {
-  try {
-    const list = await api("/departments");
-    const sel = $("s-dept");
-    list.forEach((d) => sel.add(new Option(d.name, d.id)));
-  } catch (e) { say("signupMsg", "Could not load departments.", "err"); }
-}
-
 async function afterAuth() {
   me = await api("/users/me", { auth: true });
   sessionStorage.setItem("token", token);
@@ -170,97 +1020,335 @@ async function afterAuth() {
   }
   try { info = await api("/face/enrollment", { auth: true }); } catch {}
   if (me.face_enrolled) { location.href = "/portal"; return; }
-  $("consent").showModal();
+  
+  // Direct multi-step navigation: show guidelines next
+  show("instructions");
 }
 
 function finish(justEnrolled) {
   show("done");
   $("doneTitle").textContent = "Hello, " + (me.full_name || me.username || me.email);
-  $("doneText").textContent = justEnrolled ? "Your face data was saved." :
-    me.face_enrolled ? "Face recognition is set up." : "Face recognition is not set up yet.";
+  $("doneText").textContent = justEnrolled
+    ? "Your face recognition data has been securely saved."
+    : (me.face_enrolled ? "Face recognition is set up." : "Face recognition is not set up yet. You can set it up anytime.");
   $("startEnroll").classList.toggle("hidden", me.face_enrolled);
 }
 
 $("loginForm").addEventListener("submit", async (e) => {
-  e.preventDefault(); say("loginMsg", "");
+  e.preventDefault();
+  setFieldError("l-user", "l-user-err", "");
+  setFieldError("l-pass", "l-pass-err", "");
+  say("loginMsg", "");
+
+  const userOrEmail = $("l-user").value.trim();
+  const pass = $("l-pass").value;
+
+  if (!userOrEmail) {
+    setFieldError("l-user", "l-user-err", "SIET email address is required.");
+    return;
+  }
+  if (!pass) {
+    setFieldError("l-pass", "l-pass-err", "Password is required.");
+    return;
+  }
+
   try {
-    const t = await api("/auth/login", { method: "POST", body: { username: $("l-user").value, password: $("l-pass").value } });
-    token = t.access_token; $("l-pass").value = "";
+    const t = await api("/auth/login", {
+      method: "POST",
+      body: { username: userOrEmail, password: pass }
+    });
+    token = t.access_token;
+    $("l-pass").value = "";
     await afterAuth();
-  } catch (err) { say("loginMsg", err.message, "err"); }
+  } catch (err) {
+    say("loginMsg", err.message, "err");
+  }
 });
 
 $("signupForm").addEventListener("submit", async (e) => {
-  e.preventDefault(); say("signupMsg", "");
+  e.preventDefault();
+  clearAllErrors();
+  say("signupMsg", "");
+
+  const firstName = $("s-first").value.trim();
+  const lastName = $("s-last").value.trim();
+  const email = $("s-email").value.trim();
+  const mobile = $("s-mobile").value.trim();
+  const pass = $("s-pass").value;
+  const passConfirm = $("s-pass-confirm").value;
+
+  let hasError = false;
+
+  if (!firstName) {
+    setFieldError("s-first", "s-first-err", "First name is required.");
+    hasError = true;
+  }
+  if (!lastName) {
+    setFieldError("s-last", "s-last-err", "Last name is required.");
+    hasError = true;
+  }
+
+  if (!email) {
+    setFieldError("s-email", "s-email-err", "SIET email address is required.");
+    hasError = true;
+  } else if (!SIET_DOMAIN_REGEX.test(email)) {
+    if (/@gmail\.com$/i.test(email)) {
+      setFieldError("s-email", "s-email-err", "Gmail addresses are not allowed. Please use your official @siet.ac.in email.");
+    } else {
+      setFieldError("s-email", "s-email-err", "Only email addresses ending in @siet.ac.in are permitted.");
+    }
+    hasError = true;
+  }
+
+  const cleanMobile = mobile.replace(/[\s\-]/g, "");
+  if (!mobile) {
+    setFieldError("s-mobile", "s-mobile-err", "Mobile number is required.");
+    hasError = true;
+  } else if (!MOBILE_REGEX.test(cleanMobile)) {
+    setFieldError("s-mobile", "s-mobile-err", "Enter a valid 10-digit mobile number (e.g. 9876543210).");
+    hasError = true;
+  }
+
+  if (!pass) {
+    setFieldError("s-pass", "s-pass-err", "Password is required.");
+    hasError = true;
+  } else if (pass.length < 10) {
+    setFieldError("s-pass", "s-pass-err", "Password must be at least 10 characters long.");
+    hasError = true;
+  }
+
+  if (!passConfirm) {
+    setFieldError("s-pass-confirm", "s-pass-confirm-err", "Please confirm your password.");
+    hasError = true;
+  } else if (pass !== passConfirm) {
+    setFieldError("s-pass-confirm", "s-pass-confirm-err", "Passwords do not match. Please re-enter.");
+    hasError = true;
+  }
+
+  if (hasError) return;
+
   try {
-    const r = await api("/auth/signup", { method: "POST", body: {
-      username: $("s-user").value, employee_id: $("s-emp").value, department_id: Number($("s-dept").value),
-      email: $("s-email").value, password: $("s-pass").value } });
-    token = r.access_token; $("s-pass").value = "";
+    const r = await api("/auth/signup", {
+      method: "POST",
+      body: {
+        first_name: firstName,
+        last_name: lastName,
+        email: email,
+        mobile_number: cleanMobile,
+        password: pass
+      }
+    });
+    token = r.access_token;
+    $("s-pass").value = "";
+    $("s-pass-confirm").value = "";
     await afterAuth();
-  } catch (err) { say("signupMsg", err.message, "err"); }
+  } catch (err) {
+    const msg = err.message || "Registration failed";
+    if (msg.toLowerCase().includes("email already registered") || msg.toLowerCase().includes("already registered")) {
+      setFieldError("s-email", "s-email-err", "This SIET email is already registered. Please sign in instead.");
+    } else {
+      say("signupMsg", msg, "err");
+    }
+  }
 });
 
 $("forgotForm").addEventListener("submit", async (e) => {
   e.preventDefault();
+  setFieldError("f-user", "f-user-err", "");
+  say("forgotMsg", "");
+  const email = $("f-user").value.trim();
+  if (!email) {
+    setFieldError("f-user", "f-user-err", "SIET email address is required.");
+    return;
+  }
   try {
-    const r = await api("/auth/forgot-password", { method: "POST", body: { username: $("f-user").value } });
+    const r = await api("/auth/forgot-password", { method: "POST", body: { username: email } });
     say("forgotMsg", r.detail, "ok");
   } catch (err) { say("forgotMsg", err.message, "err"); }
 });
 
 $("resetForm").addEventListener("submit", async (e) => {
   e.preventDefault();
+  setFieldError("r-pass", "r-pass-err", "");
+  say("resetMsg", "");
+  const pass = $("r-pass").value;
+  if (!pass || pass.length < 10) {
+    setFieldError("r-pass", "r-pass-err", "Password must be at least 10 characters.");
+    return;
+  }
   try {
-    await api("/auth/reset-password", { method: "POST", body: { token: resetToken, new_password: $("r-pass").value } });
+    await api("/auth/reset-password", { method: "POST", body: { token: resetToken, new_password: pass } });
     history.replaceState(null, "", "/");
-    show("login"); say("loginMsg", "Password changed. Please log in.", "ok");
+    show("login"); say("loginMsg", "Password changed successfully. Please sign in.", "ok");
   } catch (err) { say("resetMsg", err.message, "err"); }
 });
 
-$("decline").addEventListener("click", () => { $("consent").close(); finish(); });
+// Consent dialog events
+$("decline").addEventListener("click", () => { $("consent").close(); finish(false); });
 $("agree").addEventListener("click", () => { $("consent").close(); startCapture(); });
-$("startEnroll").addEventListener("click", () => $("consent").showModal());
+
+// Multi-step navigation events
+$("toCapture").addEventListener("click", () => startCapture());
+$("skipEnroll").addEventListener("click", () => finish(false));
+$("skipFromCapture").addEventListener("click", () => finish(false));
+$("backToInstructions").addEventListener("click", () => show("instructions"));
+
+$("startEnroll").addEventListener("click", () => show("instructions"));
 $("logout").addEventListener("click", () => { token = null; me = null; sessionStorage.removeItem("token"); show("login"); });
 $("toPortal").addEventListener("click", () => { location.href = "/portal"; });
 
 async function startCapture() {
-  shots = []; renderShots(); say("capMsg", "");
+  shots = [];
+  renderShots();
+  say("capMsg", "");
   show("capture");
+
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    say("capMsg", "Webcam access is restricted in this browser context (e.g. non-HTTPS). You can click 'Upload file' to upload 10 face photos.", "err");
+    return;
+  }
+
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 }, audio: false });
-    $("video").srcObject = stream;
-  } catch { say("capMsg", "Camera access was denied or no camera was found.", "err"); }
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" },
+      audio: false
+    });
+    const v = $("video");
+    v.srcObject = stream;
+    v.onloadedmetadata = () => {
+      v.play().catch((e) => console.warn("Video play error:", e));
+    };
+    await v.play().catch(() => {});
+  } catch (err) {
+    console.warn("Camera access error:", err);
+    say("capMsg", "Camera access was denied or no camera found. Please check permissions, or use 'Upload file'.", "err");
+  }
 }
+
 function stopCamera() {
   if (stream) stream.getTracks().forEach((t) => t.stop());
-  stream = null; $("video").srcObject = null;
+  stream = null;
+  $("video").srcObject = null;
 }
+
 function renderShots() {
-  $("shots").replaceChildren(...shots.map((s) => Object.assign(new Image(), { src: s })));
-  $("capCount").textContent = shots.length + " captured (need " + info.min_images + "-" + info.max_images + "). Face the camera in good light; vary your angle slightly.";
-  $("snap").disabled = shots.length >= info.max_images;
-  $("submit").disabled = shots.length < info.min_images;
+  const container = $("shots");
+  container.replaceChildren(...shots.map((s, idx) => {
+    const item = h("div", { class: "shot-item" },
+      Object.assign(new Image(), { src: s }),
+      h("span", { class: "shot-badge" }, "#" + (idx + 1)),
+      h("button", {
+        type: "button",
+        class: "shot-del",
+        title: "Remove this photo",
+        onclick: (e) => {
+          e.stopPropagation();
+          shots.splice(idx, 1);
+          renderShots();
+        }
+      }, "×")
+    );
+    return item;
+  }));
+
+  const count = shots.length;
+  const countEl = $("capCount");
+  
+  if (count === 0) {
+    countEl.innerHTML = `<span class="badge info">0 / ${MIN_CAPTURE} photos</span> Exactly 10 photos required (only 1 face)`;
+  } else if (count < MIN_CAPTURE) {
+    countEl.innerHTML = `<span class="badge warn">${count} / ${MIN_CAPTURE} photos</span> Need <b>${MIN_CAPTURE - count} more</b> (rotate head slightly)`;
+  } else {
+    countEl.innerHTML = `<span class="badge ok">&check; ${count} / ${MAX_CAPTURE} photos completed</span> Ready to submit!`;
+  }
+
+  $("snap").disabled = count >= MAX_CAPTURE;
+  if ($("uploadBtn")) $("uploadBtn").disabled = count >= MAX_CAPTURE;
+  $("submit").disabled = count !== MIN_CAPTURE;
+  $("submit").textContent = count === MIN_CAPTURE ? `Submit 10 Photos` : `Submit (${count}/${MIN_CAPTURE})`;
 }
+
 $("snap").addEventListener("click", () => {
   const v = $("video");
-  if (!v.videoWidth) return say("capMsg", "Camera is not ready.", "err");
-  const c = $("canvas"); c.width = v.videoWidth; c.height = v.videoHeight;
-  c.getContext("2d").drawImage(v, 0, 0);
-  shots.push(c.toDataURL("image/jpeg", 0.9)); renderShots();
+  if (!v.videoWidth || !v.videoHeight) {
+    return say("capMsg", "Camera is not ready yet. Please ensure camera access is allowed.", "err");
+  }
+  
+  if (shots.length >= MAX_CAPTURE) {
+    return say("capMsg", `Maximum of ${MAX_CAPTURE} photos reached. Remove a photo to retake.`, "warn");
+  }
+
+  // Shutter flash effect
+  const box = $("cameraBox");
+  if (box) {
+    box.classList.add("flash");
+    setTimeout(() => box.classList.remove("flash"), 120);
+  }
+
+  const c = $("canvas");
+  c.width = v.videoWidth;
+  c.height = v.videoHeight;
+  const ctx = c.getContext("2d");
+  ctx.drawImage(v, 0, 0, c.width, c.height);
+  
+  shots.push(c.toDataURL("image/jpeg", 0.9));
+  renderShots();
+  say("capMsg", "");
 });
-$("clear").addEventListener("click", () => { shots = []; renderShots(); say("capMsg", ""); });
+
+$("clear").addEventListener("click", () => {
+  shots = [];
+  renderShots();
+  say("capMsg", "");
+});
+
+// File upload fallback
+$("uploadBtn").addEventListener("click", () => $("fileInput").click());
+$("fileInput").addEventListener("change", async (e) => {
+  const files = Array.from(e.target.files || []);
+  if (!files.length) return;
+  
+  const remaining = MAX_CAPTURE - shots.length;
+  if (remaining <= 0) {
+    say("capMsg", `Maximum of ${MAX_CAPTURE} photos reached.`, "warn");
+    return;
+  }
+
+  const toProcess = files.slice(0, remaining);
+  for (const file of toProcess) {
+    const reader = new FileReader();
+    const dataUrl = await new Promise((res) => {
+      reader.onload = () => res(reader.result);
+      reader.readAsDataURL(file);
+    });
+    shots.push(dataUrl);
+  }
+  if (files.length > remaining) {
+    say("capMsg", `Added ${toProcess.length} photos. Only 10 photos total are allowed.`, "warn");
+  } else {
+    say("capMsg", "");
+  }
+  $("fileInput").value = "";
+  renderShots();
+});
+
 $("submit").addEventListener("click", async () => {
-  $("submit").disabled = true; say("capMsg", "Uploading and verifying...");
+  if (shots.length !== MIN_CAPTURE) {
+    return say("capMsg", `Exactly ${MIN_CAPTURE} photos are required before submitting.`, "warn");
+  }
+  $("submit").disabled = true;
+  say("capMsg", "Verifying faces and uploading embeddings...");
   try {
     await api("/face/enroll", { method: "POST", auth: true, body: { images: shots } });
-    me.face_enrolled = true; finish(true);
-  } catch (err) { say("capMsg", err.message, "err"); renderShots(); }
+    me.face_enrolled = true;
+    finish(true);
+  } catch (err) {
+    say("capMsg", err.message, "err");
+    renderShots();
+  }
 });
 
-loadDepartments();
-
-// Linked from the portal when face recognition is not set up: resume with the stored session.
+// Linked from the portal when face recognition is not set up: resume with stored session.
 if (!resetToken && new URLSearchParams(location.search).has("enroll") && sessionStorage.getItem("token")) {
   token = sessionStorage.getItem("token");
   afterAuth().catch(() => { sessionStorage.removeItem("token"); token = null; });

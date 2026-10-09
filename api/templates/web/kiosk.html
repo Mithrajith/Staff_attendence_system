@@ -1,28 +1,36 @@
 <!doctype html>
 <html lang="en">
-
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Check in / out</title>
+  <title>Faculty Check In / Out</title>
+  <link rel="icon" href="/static/img/image.png" type="image/png">
   <style>
-    * {
-      box-sizing: border-box;
+    *, *::before, *::after { box-sizing: border-box; }
+    :root {
+      --blue: #1a73e8;
+      --success: #188038;
+      --danger: #d93025;
+      --surface: #ffffff;
+      --border: #dadce0;
+      --text: #202124;
+      --muted: #5f6368;
+      --radius: 12px;
     }
 
-    html,
-    body {
+    html, body {
       height: 100%;
       margin: 0;
     }
 
     body {
-      font: 18px/1.4 system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
-      background: #f2f2f2;
-      color: #111;
+      font: 18px/1.4 "Google Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: #1a1a1a;
+      color: var(--text);
       overflow: hidden;
     }
 
+    /* ---- Camera feed ---- */
     #cam {
       position: fixed;
       inset: 0;
@@ -30,166 +38,165 @@
       height: 100%;
       object-fit: cover;
       transform: scaleX(-1);
-      background: #e4e4e4;
+      background: #111;
     }
 
+    /* ---- Face guide oval ---- */
     #guide {
       position: fixed;
       left: 50%;
       top: 46%;
-      width: min(42vh, 70vw);
-      height: min(54vh, 90vw);
+      width: min(40vh, 68vw);
+      height: min(52vh, 88vw);
       transform: translate(-50%, -50%);
-      border: 3px solid rgba(255, 255, 255, .9);
+      border: 2.5px solid rgba(255,255,255,.7);
       border-radius: 50%;
-      box-shadow: 0 0 0 2px rgba(0, 0, 0, .15);
+      box-shadow: 0 0 0 2px rgba(0,0,0,.2);
       pointer-events: none;
+      transition: border-color .3s;
     }
-
     body.counting #guide {
-      border-color: #1a7f37;
+      border-color: rgba(24,128,56,.85);
+      box-shadow: 0 0 0 2px rgba(24,128,56,.3), 0 0 24px rgba(24,128,56,.25);
     }
 
+    /* ---- Top bar (glass) ---- */
     #top {
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
+      top: 0; left: 0; right: 0;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 14px 24px;
-      background: rgba(255, 255, 255, .92);
-      font-size: 16px;
+      padding: 12px 24px;
+      background: rgba(255,255,255,.9);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-bottom: 1px solid rgba(255,255,255,.4);
     }
-
-    #top a {
-      color: #666;
+    #top .brand {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .brand-dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--blue);
+    }
+    #top #clock {
+      font-size: 14px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+    #top a#logout {
       font-size: 13px;
-      text-decoration: underline;
+      color: var(--muted);
+      text-decoration: none;
       cursor: pointer;
+      padding: 5px 12px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      transition: background .15s;
     }
+    #top a#logout:hover { background: #f1f3f4; }
 
+    /* ---- Prompt pill ---- */
     #prompt {
       position: fixed;
       left: 50%;
       bottom: 40px;
       transform: translateX(-50%);
       max-width: 90vw;
-      padding: 14px 32px;
-      background: rgba(255, 255, 255, .94);
-      font-size: 28px;
+      padding: 12px 28px;
+      background: rgba(255,255,255,.92);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      border-radius: 30px;
+      font-size: 18px;
       font-weight: 600;
       text-align: center;
+      color: var(--text);
+      white-space: nowrap;
+      box-shadow: 0 2px 12px rgba(0,0,0,.18);
     }
 
-    .hidden {
-      display: none !important;
-    }
+    .hidden { display: none !important; }
 
+    /* ---- Overlays ---- */
     .overlay {
       position: fixed;
       inset: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(255, 255, 255, .8);
+      background: rgba(0,0,0,.45);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
     }
 
+    /* ---- Card (popup & confirm) ---- */
     .card {
-      width: min(92vw, 440px);
-      padding: 32px;
-      background: #fff;
-      border: 1px solid #ccc;
+      width: min(92vw, 420px);
+      padding: 28px 32px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
       text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,.2);
     }
+    .card svg { display: block; margin: 0 auto; }
 
-    .card svg {
-      display: block;
-      margin: 0 auto;
-    }
+    /* ---- Success tick ---- */
+    #tick { width: 80px; height: 80px; }
 
-    #tick {
-      width: 96px;
-      height: 96px;
-    }
-
+    /* ---- Popup text ---- */
     #pTitle {
-      margin: 12px 0 4px;
-      font-size: 14px;
-      font-weight: 600;
+      margin: 14px 0 4px;
+      font-size: 11px;
+      font-weight: 700;
       letter-spacing: .08em;
       text-transform: uppercase;
-      color: #666;
+      color: var(--muted);
     }
-
     #popup.err #pTitle {
-      color: #b42318;
-      font-size: 28px;
+      color: var(--danger);
+      font-size: 22px;
       letter-spacing: 0;
       text-transform: none;
-    }
-
-    #popup.err #pName {
-      font-size: 24px;
-    }
-
-    #pName {
-      font-size: 32px;
       font-weight: 600;
-      line-height: 1.2;
     }
-
-    #pDept,
-    #pEmp {
-      color: #444;
-      font-size: 20px;
+    #popup.err #pName { font-size: 18px; }
+    #pName {
+      font-size: 26px;
+      font-weight: 600;
+      line-height: 1.25;
+      color: var(--text);
     }
-
+    #pDept, #pEmp { color: var(--muted); font-size: 16px; margin-top: 2px; }
     #pAction {
       margin-top: 12px;
-      font-size: 22px;
+      font-size: 18px;
       font-weight: 600;
     }
+    #pAction.in  { color: var(--success); }
+    #pAction.out { color: var(--danger); }
 
-    #pAction.in,
-    .man-in {
-      color: #1a7f37;
-    }
-
-    #pAction.out,
-    .man-out {
-      color: #b42318;
-    }
-
-    .man {
-      width: 200px;
-      height: 140px;
-      margin-top: 8px;
-    }
-
-    .runner {
-      animation: run .9s ease-out both;
-    }
-
+    /* ---- Stick figures ---- */
+    .man { width: 180px; height: 120px; margin-top: 8px; }
+    .man-in  { color: var(--success); }
+    .man-out { color: var(--danger); }
+    .runner { animation: run .9s ease-out both; }
     @keyframes run {
-      from {
-        transform: translateX(-70px);
-        opacity: 0;
-      }
-
-      to {
-        transform: none;
-        opacity: 1;
-      }
+      from { transform: translateX(-60px); opacity: 0; }
+      to   { transform: none; opacity: 1; }
     }
+    @media (prefers-reduced-motion: reduce) { .runner { animation: none; } }
 
-    @media (prefers-reduced-motion: reduce) {
-      .runner {
-        animation: none;
-      }
-    }
-
+    /* ---- Greeting fullscreen ---- */
     .screen {
       position: fixed;
       inset: 0;
@@ -198,127 +205,129 @@
       align-items: center;
       justify-content: center;
       padding: 32px;
-      background: #fff;
+      background: var(--surface);
       text-align: center;
-      border-top: 10px solid #1a7f37;
+      border-top: 6px solid var(--success);
     }
-
-    .screen.out {
-      border-top-color: #b42318;
-    }
-
+    .screen.out { border-top-color: var(--danger); }
     .screen h1 {
-      margin: 0 0 16px;
-      font-size: clamp(32px, 6vw, 64px);
+      margin: 0 0 12px;
+      font-size: clamp(28px, 5.5vw, 58px);
       line-height: 1.15;
+      font-weight: 600;
     }
-
     .screen p {
       margin: 0;
-      max-width: 760px;
-      font-size: clamp(20px, 3vw, 32px);
-      color: #444;
+      max-width: 720px;
+      font-size: clamp(16px, 2.8vw, 28px);
+      color: var(--muted);
+      font-weight: 400;
     }
+    #camError h1 { font-size: 26px; }
 
-    #camError h1 {
-      font-size: 28px;
-    }
-
-    .confirm {
-      position: relative;
-    }
-
+    /* ---- Confirm card ---- */
+    .confirm { position: relative; }
     #cLabel {
-      font-size: 14px;
-      font-weight: 600;
+      font-size: 11px;
+      font-weight: 700;
       letter-spacing: .08em;
       text-transform: uppercase;
-      color: #666;
+      color: var(--muted);
     }
-
     #cName {
       margin-top: 8px;
-      font-size: 32px;
+      font-size: 26px;
       font-weight: 600;
-      line-height: 1.2;
+      line-height: 1.25;
+      color: var(--text);
     }
-
-    #cDept,
-    #cEmp {
-      color: #444;
-      font-size: 20px;
-    }
-
+    #cDept, #cEmp { color: var(--muted); font-size: 16px; margin-top: 2px; }
     .confirm .row {
       display: flex;
-      gap: 12px;
-      margin-top: 24px;
+      gap: 10px;
+      margin-top: 20px;
     }
-
     .confirm .row button {
       flex: 1;
-      margin: 0;
-      padding: 18px 12px;
-      font-size: 24px;
+      padding: 16px 10px;
+      font: inherit;
+      font-size: 18px;
       font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: opacity .15s;
     }
-
     .confirm .row button:disabled {
-      background: #e4e4e4;
-      border-color: #ccc;
-      color: #888;
+      opacity: .35;
       cursor: not-allowed;
     }
-
+    #btnIn  { background: #e6f4ea; color: var(--success); }
+    #btnIn:not(:disabled):hover  { background: #c6e9cf; }
+    #btnOut { background: #fce8e6; color: var(--danger); }
+    #btnOut:not(:disabled):hover { background: #f5c6c2; }
     #cNote {
-      margin-top: 16px;
-      font-size: 14px;
-      color: #666;
+      margin-top: 12px;
+      font-size: 13px;
+      color: var(--muted);
     }
-
+    /* Close (X) button */
     .confirm .x {
       position: absolute;
-      top: 8px;
-      right: 8px;
-      width: 44px;
-      height: 44px;
-      margin: 0;
-      padding: 0;
+      top: 0; right: 0;
+      width: 40px; height: 40px;
       display: flex;
       align-items: center;
       justify-content: center;
-      border: 0;
+      border: none;
       background: transparent;
-      color: #111;
-    }
-
-    button {
-      margin-top: 24px;
-      padding: 10px 22px;
-      font: inherit;
-      font-size: 16px;
-      border: 1px solid #111;
-      border-radius: 0;
-      background: #111;
-      color: #fff;
+      color: var(--muted);
       cursor: pointer;
+      border-radius: 50%;
+      transition: background .15s;
+      padding: 0;
     }
+    .confirm .x:hover { background: #f1f3f4; }
+
+    /* ---- Retry button (camera error) ---- */
+    button#retry {
+      margin-top: 20px;
+      padding: 10px 24px;
+      font: inherit;
+      font-size: 15px;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      transition: background .15s;
+    }
+    button#retry:hover { background: #f1f3f4; }
   </style>
 </head>
 
 <body>
   <video id="cam" autoplay muted playsinline></video>
   <div id="guide"></div>
-  <div id="top"><span id="clock"></span><a id="logout">Sign out</a></div>
+
+  <div id="top">
+    <div class="brand" style="display:flex; align-items:center; gap:8px;">
+      <img src="/static/img/image.png" alt="Logo" style="width:24px; height:24px; object-fit:contain; border-radius:4px;">
+      Faculty Attendance
+    </div>
+    <span id="clock"></span>
+    <a id="logout">Sign out</a>
+  </div>
+
   <div id="prompt">Look at the camera</div>
 
+  <!-- Confirm: is this you? -->
   <div id="confirm" class="overlay hidden">
     <div class="card confirm">
       <button type="button" id="close" class="x" aria-label="Close, this is not me">
-        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor"
-          stroke-width="2.5" stroke-linecap="round">
-          <line x1="5" y1="5" x2="19" y2="19" />
-          <line x1="19" y1="5" x2="5" y2="19" />
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/>
         </svg>
       </button>
       <div id="cLabel">Is this you?</div>
@@ -329,16 +338,16 @@
         <button type="button" id="btnIn" data-action="check_in">Check in</button>
         <button type="button" id="btnOut" data-action="check_out">Check out</button>
       </div>
-      <div id="cNote">Not you? Close this window, nothing will be recorded.</div>
+      <div id="cNote">Not you? Close this — nothing will be recorded.</div>
     </div>
   </div>
 
+  <!-- Result popup -->
   <div id="popup" class="overlay hidden">
     <div class="card">
       <svg id="tick" viewBox="0 0 100 100" aria-hidden="true">
-        <circle cx="50" cy="50" r="46" fill="#1a7f37" />
-        <polyline points="28,52 44,68 74,34" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round"
-          stroke-linejoin="round" />
+        <circle cx="50" cy="50" r="46" fill="#188038"/>
+        <polyline points="28,52 44,68 74,34" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
       <div id="pTitle"></div>
       <div id="pName"></div>
@@ -348,20 +357,20 @@
       <!-- Check in: stick man running through the door (green) -->
       <svg id="manIn" class="man man-in hidden" viewBox="0 0 200 140" aria-hidden="true" fill="none"
         stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="8" y1="130" x2="192" y2="130" stroke-width="3" />
-        <rect x="130" y="20" width="54" height="110" fill="#e6f4ea" />
-        <polygon points="130,20 112,30 112,120 130,130" fill="#fff" />
-        <circle cx="120" cy="78" r="2" fill="currentColor" />
+        <line x1="8" y1="130" x2="192" y2="130" stroke-width="3"/>
+        <rect x="130" y="20" width="54" height="110" fill="#e6f4ea"/>
+        <polygon points="130,20 112,30 112,120 130,130" fill="#fff"/>
+        <circle cx="120" cy="78" r="2" fill="currentColor"/>
         <g transform="translate(86 92)">
           <g class="runner">
-            <circle cx="12" cy="-42" r="8" fill="currentColor" />
-            <polyline points="0,0 8,-30" />
-            <polyline points="8,-26 22,-18 32,-28" />
-            <polyline points="8,-26 -6,-20 -14,-8" />
-            <polyline points="0,0 16,8 10,36" />
-            <polyline points="0,0 -10,16 -28,22" />
-            <line x1="-40" y1="-30" x2="-56" y2="-30" stroke-width="3" />
-            <line x1="-34" y1="-14" x2="-54" y2="-14" stroke-width="3" />
+            <circle cx="12" cy="-42" r="8" fill="currentColor"/>
+            <polyline points="0,0 8,-30"/>
+            <polyline points="8,-26 22,-18 32,-28"/>
+            <polyline points="8,-26 -6,-20 -14,-8"/>
+            <polyline points="0,0 16,8 10,36"/>
+            <polyline points="0,0 -10,16 -28,22"/>
+            <line x1="-40" y1="-30" x2="-56" y2="-30" stroke-width="3"/>
+            <line x1="-34" y1="-14" x2="-54" y2="-14" stroke-width="3"/>
           </g>
         </g>
       </svg>
@@ -369,36 +378,38 @@
       <!-- Check out: stick man running out past the gate (red) -->
       <svg id="manOut" class="man man-out hidden" viewBox="0 0 200 140" aria-hidden="true" fill="none"
         stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="8" y1="130" x2="192" y2="130" stroke-width="3" />
-        <path d="M26 130 V34 H78 V130" />
-        <line x1="26" y1="34" x2="40" y2="20" stroke-width="3" />
-        <line x1="78" y1="34" x2="64" y2="20" stroke-width="3" />
-        <line x1="40" y1="20" x2="64" y2="20" stroke-width="3" />
+        <line x1="8" y1="130" x2="192" y2="130" stroke-width="3"/>
+        <path d="M26 130 V34 H78 V130"/>
+        <line x1="26" y1="34" x2="40" y2="20" stroke-width="3"/>
+        <line x1="78" y1="34" x2="64" y2="20" stroke-width="3"/>
+        <line x1="40" y1="20" x2="64" y2="20" stroke-width="3"/>
         <g transform="translate(130 92)">
           <g class="runner">
-            <circle cx="12" cy="-42" r="8" fill="currentColor" />
-            <polyline points="0,0 8,-30" />
-            <polyline points="8,-26 22,-18 32,-28" />
-            <polyline points="8,-26 -6,-20 -14,-8" />
-            <polyline points="0,0 16,8 10,36" />
-            <polyline points="0,0 -10,16 -28,22" />
-            <line x1="-34" y1="-30" x2="-50" y2="-30" stroke-width="3" />
-            <line x1="-34" y1="-14" x2="-50" y2="-14" stroke-width="3" />
+            <circle cx="12" cy="-42" r="8" fill="currentColor"/>
+            <polyline points="0,0 8,-30"/>
+            <polyline points="8,-26 22,-18 32,-28"/>
+            <polyline points="8,-26 -6,-20 -14,-8"/>
+            <polyline points="0,0 16,8 10,36"/>
+            <polyline points="0,0 -10,16 -28,22"/>
+            <line x1="-34" y1="-30" x2="-50" y2="-30" stroke-width="3"/>
+            <line x1="-34" y1="-14" x2="-50" y2="-14" stroke-width="3"/>
           </g>
         </g>
-        <polyline points="168,60 182,70 168,80" stroke-width="3" />
+        <polyline points="168,60 182,70 168,80" stroke-width="3"/>
       </svg>
 
       <div id="pAction"></div>
     </div>
   </div>
 
+  <!-- Greeting screen (fullscreen, check in / check out) -->
   <div id="greeting" class="screen hidden">
     <h1 id="gHead"></h1>
     <p id="gSub"></p>
   </div>
 
-  <div id="camError" class="screen hidden" style="border-top-color:#b42318">
+  <!-- Camera error screen -->
+  <div id="camError" class="screen hidden" style="border-top-color:var(--danger)">
     <h1>Camera unavailable</h1>
     <p>Allow camera access for this page, then try again.</p>
     <button type="button" id="retry">Try again</button>
@@ -447,14 +458,14 @@
     // ---- Greetings: [headline, sub-line]; {n} is the first name ----
     const GREET = {
       in: {
-        morning: [["Good morning, {n}!", "Have a productive day!"], ["Good morning, {n}!", "Wishing you a bright and focused day ahead."], ["Welcome in, {n}!", "Make today a great one."]],
+        morning:   [["Good morning, {n}!", "Have a productive day!"], ["Good morning, {n}!", "Wishing you a bright and focused day ahead."], ["Welcome in, {n}!", "Make today a great one."]],
         afternoon: [["Good afternoon, {n}!", "Hope the rest of your day goes smoothly."], ["Welcome, {n}!", "Let's make the afternoon count."]],
-        evening: [["Good evening, {n}!", "Thanks for being here. Have a smooth shift."]],
+        evening:   [["Good evening, {n}!", "Thanks for being here. Have a smooth shift."]],
       },
       out: {
-        day: [["Thank you, {n}!", "Take care, and see you soon."], ["Thanks for your hard work, {n}!", "Have a good rest of the day."]],
+        day:     [["Thank you, {n}!", "Take care, and see you soon."], ["Thanks for your hard work, {n}!", "Have a good rest of the day."]],
         evening: [["Thank you, {n}!", "Get some fresh air, spend time with family & friends."], ["Great work today, {n}!", "Switch off, relax and enjoy your evening."], ["Well done, {n}!", "Step outside, take a walk, call someone you love."]],
-        night: [["Thank you, {n}!", "Get home safe and rest well."]],
+        night:   [["Thank you, {n}!", "Get home safe and rest well."]],
       },
     };
     const pick = (a) => a[Math.floor(Math.random() * a.length)];
@@ -498,12 +509,12 @@
 
     // Every non-recorded outcome is an error card; `r` is the API result.
     const ERRORS = {
-      unknown: (r) => ({ title: "Oops!", name: "It seems your data haven't registered", dept: "Please contact " + (r.contact || "an administrator") }),
-      already_checked_in: (r) => ({ title: "Already checked in", name: r.name, dept: r.department, actionText: "Choose Check out when you leave" }),
-      not_checked_in: (r) => ({ title: "You haven't checked in today", name: r.name, dept: r.department, actionText: "Choose Check in first" }),
-      expired: () => ({ title: "Session expired", name: "Please look at the camera again" }),
-      no_face: () => ({ title: "Face not clear", name: "We couldn't get a clear view of your face", dept: "Face the camera, remove anything covering it and try again" }),
-      unavailable: () => ({ title: "Service unavailable", name: "Please try again in a moment" }),
+      unknown:           (r) => ({ title: "Oops!", name: "It seems your data haven't registered", dept: "Please contact " + (r.contact || "an administrator") }),
+      already_checked_in:(r) => ({ title: "Already checked in", name: r.name, dept: r.department, actionText: "Choose Check out when you leave" }),
+      not_checked_in:    (r) => ({ title: "You haven't checked in today", name: r.name, dept: r.department, actionText: "Choose Check in first" }),
+      expired:           ()  => ({ title: "Session expired", name: "Please look at the camera again" }),
+      no_face:           ()  => ({ title: "Face not clear", name: "We couldn't get a clear view of your face", dept: "Face the camera, remove anything covering it and try again" }),
+      unavailable:       ()  => ({ title: "Service unavailable", name: "Please try again in a moment" }),
     };
 
     // ---- Flow: face held 3 s -> identify -> confirm window (Check in / Check out / X) -> record -> popup + greeting ----
@@ -594,5 +605,4 @@
     tick();
   </script>
 </body>
-
 </html>

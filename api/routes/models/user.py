@@ -19,6 +19,7 @@ class UserCreate(BaseModel):
     username: Username | None = None
     employee_id: EmployeeId | None = None
     department_id: int | None = None
+    mobile_number: Annotated[str, StringConstraints(strip_whitespace=True, min_length=7, max_length=20)] | None = None
     # Optional: if omitted, a random password is set and the user gets an email link to choose their own.
     password: Password | None = None
 
@@ -35,6 +36,7 @@ class UserOut(BaseModel):
     email: EmailStr
     username: str | None
     employee_id: str | None
+    mobile_number: str | None = None
     department: DepartmentOut | None
     full_name: str
     role: Role

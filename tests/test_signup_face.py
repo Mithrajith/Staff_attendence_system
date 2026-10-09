@@ -99,6 +99,49 @@ def test_signup_ignores_role_field(client):
     assert r.status_code == 201 and r.json()["user"]["role"] == "staff"
 
 
+def test_signup_siet_email_and_mobile_validation(client):
+    dept = add_department(client)
+    # Valid registration with @siet.ac.in, first/last name, mobile number
+    payload = {
+        "first_name": "Ravi",
+        "last_name": "Kumar",
+        "email": "ravi.k@siet.ac.in",
+        "mobile_number": "9876543210",
+        "password": PW,
+    }
+    r = client.post(f"{P}/auth/signup", json=payload)
+    assert r.status_code == 201, r.text
+    user = r.json()["user"]
+    assert user["email"] == "ravi.k@siet.ac.in"
+    assert user["full_name"] == "Ravi Kumar"
+    assert user["mobile_number"] == "9876543210"
+
+    # Login with SIET email
+    r_login = client.post(f"{P}/auth/login", json={"username": "ravi.k@siet.ac.in", "password": PW})
+    assert r_login.status_code == 200
+
+    # Reject duplicate email
+    r_dup = client.post(f"{P}/auth/signup", json=payload)
+    assert r_dup.status_code == 409
+    assert "already registered" in r_dup.json()["detail"].lower()
+
+    # Reject gmail domain
+    r_gmail = client.post(f"{P}/auth/signup", json={**payload, "email": "ravi@gmail.com"})
+    assert r_gmail.status_code == 422
+    assert "Only @siet.ac.in" in r_gmail.text
+
+    # Reject other domain (e.g. yahoo.com)
+    r_yahoo = client.post(f"{P}/auth/signup", json={**payload, "email": "ravi@yahoo.com"})
+    assert r_yahoo.status_code == 422
+    assert "Only @siet.ac.in" in r_yahoo.text
+
+    # Reject invalid mobile number
+    r_bad_phone = client.post(f"{P}/auth/signup", json={**payload, "email": "new.staff@siet.ac.in", "mobile_number": "1111111111"})
+    assert r_bad_phone.status_code == 422
+    assert "Invalid mobile number" in r_bad_phone.text
+
+
+
 # --- face enrollment -----------------------------------------------------------------------------------------
 
 IMG = "A" * 200

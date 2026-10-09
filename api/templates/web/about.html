@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About - Faculty Attendance System</title>
+    <link rel="icon" href="/static/img/image.png" type="image/png">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
+        rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        bglight: '#fcfcfc',
+                        surface: '#ffffff',
+                        bordercolor: '#e5e7eb',
+                        primary: '#1a56db',
+                        textmain: '#111827',
+                        textmuted: '#4b5563',
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .fade-up {
+                @apply opacity-0 translate-y-12 transition-all duration-1000 ease-out;
+            }
+            .fade-up.visible {
+                @apply opacity-100 translate-y-0;
+            }
+            .story-text {
+                @apply text-[17px] leading-relaxed text-textmuted font-light;
+            }
+        }
+    </style>
+</head>
+
+<body
+    class="bg-bglight text-textmain font-sans antialiased selection:bg-primary selection:text-white min-h-screen flex flex-col relative overflow-x-hidden">
+
+    <!-- Subtle Background Grid Pattern -->
+    <div class="fixed inset-0 z-0 pointer-events-none opacity-[0.4]"
+        style="background-image: linear-gradient(to right, #00000008 1px, transparent 1px), linear-gradient(to bottom, #00000008 1px, transparent 1px); background-size: 5rem 5rem; mask-image: radial-gradient(circle at center, black, transparent 80%); -webkit-mask-image: radial-gradient(circle at center, black, transparent 80%);">
+    </div>
+
+    <!-- ══ Minimal Navigation ══ -->
+    <nav class="relative z-50 border-b border-bordercolor bg-bglight/90 backdrop-blur-xl">
+        <div class="max-w-7xl mx-auto px-6 h-24 flex items-center justify-between">
+            <a href="/"
+                class="flex items-center gap-3 text-textmain font-serif italic text-2xl tracking-wide hover:opacity-70 transition-opacity font-semibold">
+                <img src="/static/img/image.png" alt="Logo" class="w-8 h-8 object-contain rounded-lg">
+                Smart Faculty Attendance System.
+            </a>
+            <div
+                class="flex items-center gap-6 md:gap-10 text-[11px] tracking-[0.2em] uppercase text-gray-500 font-bold">
+                <a href="/" class="hover:text-primary transition-colors">Home</a>
+                <a href="/portal" class="hover:text-primary transition-colors">Portal</a>
+                <a href="/about" class="text-textmain border-b-2 border-textmain pb-1">Our Story</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-6 pb-32 flex-grow w-full relative z-10">
+
+        <!-- ══ The Story Hero ══ -->
+        <section class="pt-32 pb-24 border-b border-bordercolor fade-up">
+            <div class="max-w-5xl">
+                <div class="flex items-center gap-4 mb-10">
+                    <div class="w-8 h-px bg-gray-300"></div>
+                    <div class="text-[10px] uppercase tracking-[0.3em] text-gray-400 font-bold">01 &mdash; The Origin
+                    </div>
+                </div>
+
+                <h1
+                    class="text-5xl md:text-[5.5rem] font-serif text-textmain leading-[1.1] mb-12 font-bold tracking-tight">
+                    We wanted to eliminate the <span class="italic text-gray-400 font-medium">friction</span> of manual
+                    faculty attendance logs.
+                </h1>
+
+                <div class="grid md:grid-cols-2 gap-12 story-text">
+                    <p>
+                        The conventional method of tracking faculty attendance in academic institutions has remained stagnant for
+                        decades. It relies on physical sign-in registers, biometric fingerprint scanners with daily bottleneck queues, and manual logbooks.
+                        These methods are time-consuming, prone to proxy logging, and provide zero real-time insights for
+                        either faculty members or administrative leadership. We viewed this not as a minor inconvenience, but as a fundamental
+                        inefficiency in institutional operations.
+                    </p>
+                    <p>
+                        Our project was born out of a desire to build a definitive solution using state-of-the-art
+                        computer vision algorithms. We treat faculty attendance not just as administrative bookkeeping, but as an invisible,
+                        frictionless experience that operates quietly in the background, offering sub-50ms
+                        facial recognition for instantaneous check-ins and check-outs across campus departments.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ══ The Tech Stack ══ -->
+        <section class="py-24 border-b border-bordercolor fade-up">
+            <div class="grid md:grid-cols-12 gap-12 items-center">
+                <div class="md:col-span-5">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-8 h-px bg-gray-300"></div>
+                        <div class="text-[10px] uppercase tracking-[0.3em] text-gray-400 font-bold">02 &mdash;
+                            Architecture</div>
+                    </div>
+                    <h2 class="text-4xl lg:text-5xl font-serif text-textmain font-bold mb-6 leading-tight">Built for
+                        speed <br />&amp; scale.</h2>
+                    <p class="story-text">
+                        We meticulously crafted the stack to
+                        process faculty facial captures, extract deep facial embeddings, and query them against large vector stores
+                        instantaneously
+                        without straining local campus hardware.
+                    </p>
+                </div>
+
+                <!-- Stack visual -->
+                <div class="md:col-span-7 grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div
+                        class="aspect-square p-6 border border-bordercolor bg-surface hover:border-gray-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 rounded-2xl flex flex-col items-center justify-center text-center gap-4 group">
+                        <i
+                            class="fab fa-python text-4xl text-gray-300 group-hover:text-primary transition-colors duration-300 transform group-hover:scale-110"></i>
+                        <span
+                            class="text-[10px] font-bold uppercase tracking-widest text-gray-400 group-hover:text-textmain transition-colors">Python</span>
+                    </div>
+                    <div
+                        class="aspect-square p-6 border border-bordercolor bg-surface hover:border-gray-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 rounded-2xl flex flex-col items-center justify-center text-center gap-4 group mt-0 md:mt-8">
+                        <i
+                            class="fas fa-microchip text-4xl text-gray-300 group-hover:text-primary transition-colors duration-300 transform group-hover:scale-110"></i>
+                        <span
+                            class="text-[10px] font-bold uppercase tracking-widest text-gray-400 group-hover:text-textmain transition-colors">AI
+                            Engine</span>
+                    </div>
+                    <div
+                        class="aspect-square p-6 border border-bordercolor bg-surface hover:border-gray-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 rounded-2xl flex flex-col items-center justify-center text-center gap-4 group">
+                        <i
+                            class="fas fa-bolt text-4xl text-gray-300 group-hover:text-primary transition-colors duration-300 transform group-hover:scale-110"></i>
+                        <span
+                            class="text-[10px] font-bold uppercase tracking-widest text-gray-400 group-hover:text-textmain transition-colors">Edge
+                            Sync</span>
+                    </div>
+                    <div
+                        class="aspect-square p-6 border border-bordercolor bg-surface hover:border-gray-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 rounded-2xl flex flex-col items-center justify-center text-center gap-4 group mt-0 md:mt-8">
+                        <i
+                            class="fas fa-shield-alt text-4xl text-gray-300 group-hover:text-primary transition-colors duration-300 transform group-hover:scale-110"></i>
+                        <span
+                            class="text-[10px] font-bold uppercase tracking-widest text-gray-400 group-hover:text-textmain transition-colors">Data
+                            Security</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ══ The Roadmap ══ -->
+        <section class="py-24 border-b border-bordercolor fade-up">
+            <div class="grid md:grid-cols-12 gap-12 items-center">
+                <div class="md:col-span-5">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-8 h-px bg-gray-300"></div>
+                        <div class="text-[10px] uppercase tracking-[0.3em] text-gray-400 font-bold">03 &mdash; Roadmap
+                        </div>
+                    </div>
+                    <h2 class="text-4xl lg:text-5xl font-serif text-textmain font-bold mb-6 leading-tight">Beyond
+                        <br />attendance.</h2>
+                    <p class="story-text text-[15px]">
+                        We are fundamentally expanding the faculty platform. Rather than just recognizing faces, the platform
+                        will evolve into a holistic faculty workspace natively syncing with academic timetables, lecture hours,
+                        and departmental reporting structures.
+                    </p>
+                </div>
+
+                <!-- Feature block -->
+                <div class="md:col-span-7">
+                    <div
+                        class="p-8 md:p-10 border border-bordercolor bg-surface rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden group hover:border-gray-300 transition-colors duration-500">
+                        <div
+                            class="absolute inset-0 bg-gradient-to-br from-blue-50/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+                        </div>
+                        <div class="relative z-10">
+                            <span
+                                class="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-primary text-[10px] font-bold uppercase tracking-widest rounded-full mb-6 border border-blue-100">
+                                <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                                Upcoming Feature
+                            </span>
+                            <h3 class="text-2xl font-serif text-textmain font-bold mb-4">Faculty Workload &amp; Schedule
+                                Integration</h3>
+                            <p class="text-[15px] text-textmuted leading-relaxed mb-6">
+                                The upcoming iteration will integrate departmental lecture timetables, workload hour distribution, and automated duty logs directly into
+                                the faculty dashboard. 
+                            </p>
+                            <div class="flex items-center gap-4 pt-6 border-t border-gray-100 mt-2">
+                                <div
+                                    class="w-8 h-8 rounded-full border border-gray-200 bg-gray-50 flex items-center justify-center text-[10px] font-bold text-gray-400 group-hover:border-primary/30 group-hover:text-primary transition-colors duration-300">
+                                    DEV</div>
+                                <span class="text-[10px] text-gray-400 font-bold tracking-widest uppercase">Currently In
+                                    Pipeline</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ══ The Team ══ -->
+        <section class="py-24 fade-up">
+            <div class="flex items-center gap-4 mb-12">
+                <div class="w-8 h-px bg-gray-300"></div>
+                <div class="text-[10px] uppercase tracking-[0.3em] text-gray-400 font-bold">04 &mdash; Core Members
+                </div>
+            </div>
+
+            <h2 class="text-4xl md:text-6xl font-serif text-textmain font-bold mb-20">The minds behind <br />the system.
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl">
+                <!-- Member 1 -->
+                <div class="group relative overflow-hidden rounded-[2rem] bg-gray-100 aspect-[3/4] cursor-pointer shadow-sm">
+                    <img src="/static/img/mithrajith.png" alt="Mithrajith K S"
+                        onerror="this.src='/static/img/profile.png'"
+                        class="w-full h-full object-cover filter grayscale opacity-90 group-hover:opacity-100 group-hover:grayscale-0 transition-all duration-700 ease-out transform group-hover:scale-105">
+                    <div
+                        class="absolute inset-0 bg-gradient-to-t from-white via-white/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                    </div>
+
+                    <!-- Default state name badge (bottom) -->
+                    <div
+                        class="absolute bottom-6 left-6 right-6 bg-white/95 backdrop-blur-md rounded-2xl p-5 shadow-sm border border-gray-100 opacity-100 group-hover:opacity-0 transition-opacity duration-300 pointer-events-none">
+                        <h3 class="text-lg font-serif font-bold text-textmain">Mithrajith K S</h3>
+                        <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold mt-1">Full Stack
+                            Developer</p>
+                    </div>
+
+                    <!-- Hover state detailed content -->
+                    <div
+                        class="absolute bottom-0 w-full p-8 pb-10 transform translate-y-6 group-hover:translate-y-0 transition-transform duration-500 ease-out opacity-0 group-hover:opacity-100">
+                        <h3 class="text-2xl font-serif font-bold text-textmain mb-1">Mithrajith K S</h3>
+                        <p class="text-[11px] text-primary uppercase tracking-widest mb-6 font-bold">Full Stack
+                            Developer</p>
+                        <div class="flex gap-5">
+                            <a href="https://portfolio-org-lovat.vercel.app/" target="_blank" rel="noopener noreferrer"
+                                class="text-textmain/60 hover:text-primary transition-colors"><i
+                                    class="fas fa-globe text-xl"></i></a>
+                            <a href="https://github.com/mithrajith" target="_blank" rel="noopener noreferrer"
+                                class="text-textmain/60 hover:text-primary transition-colors"><i
+                                    class="fab fa-github text-xl"></i></a>
+                            <a href="https://www.linkedin.com/in/mithrajith-k-s-050986293" target="_blank" rel="noopener noreferrer"
+                                class="text-textmain/60 hover:text-primary transition-colors"><i
+                                    class="fab fa-linkedin-in text-xl"></i></a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Member 2 -->
+                <div
+                    class="group relative overflow-hidden rounded-[2rem] bg-gray-100 aspect-[3/4] cursor-pointer md:mt-12 shadow-sm">
+                    <img src="/static/img/sai.png" alt="Sai Dhinakar S"
+                        onerror="this.src='/static/img/profile.png'"
+                        class="w-full h-full object-cover filter grayscale opacity-90 group-hover:opacity-100 group-hover:grayscale-0 transition-all duration-700 ease-out transform group-hover:scale-105">
+                    <div
+                        class="absolute inset-0 bg-gradient-to-t from-white via-white/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                    </div>
+
+                    <!-- Default state name badge (bottom) -->
+                    <div
+                        class="absolute bottom-6 left-6 right-6 bg-white/95 backdrop-blur-md rounded-2xl p-5 shadow-sm border border-gray-100 opacity-100 group-hover:opacity-0 transition-opacity duration-300 pointer-events-none">
+                        <h3 class="text-lg font-serif font-bold text-textmain">Sai Dhinakar S</h3>
+                        <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold mt-1">Backend &amp; ML Dev
+                        </p>
+                    </div>
+
+                    <!-- Hover state detailed content -->
+                    <div
+                        class="absolute bottom-0 w-full p-8 pb-10 transform translate-y-6 group-hover:translate-y-0 transition-transform duration-500 ease-out opacity-0 group-hover:opacity-100">
+                        <h3 class="text-2xl font-serif font-bold text-textmain mb-1">Sai Dhinakar S</h3>
+                        <p class="text-[11px] text-primary uppercase tracking-widest mb-6 font-bold">Backend &amp; ML Dev
+                        </p>
+                        <div class="flex gap-5">
+                            <a href="https://www.saidhinakar.me" target="_blank" rel="noopener noreferrer"
+                                class="text-textmain/60 hover:text-primary transition-colors"><i
+                                    class="fas fa-globe text-xl"></i></a>
+                            <a href="https://github.com/SaiDhinakar" target="_blank" rel="noopener noreferrer"
+                                class="text-textmain/60 hover:text-primary transition-colors"><i
+                                    class="fab fa-github text-xl"></i></a>
+                            <a href="https://www.linkedin.com/in/saidhinakar-s/" target="_blank" rel="noopener noreferrer"
+                                class="text-textmain/60 hover:text-primary transition-colors"><i
+                                    class="fab fa-linkedin-in text-xl"></i></a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Member 3 -->
+                <div class="group relative overflow-hidden rounded-[2rem] bg-gray-100 aspect-[3/4] cursor-pointer shadow-sm">
+                    <img src="/static/img/siddharth.png" alt="Siddharth T"
+                        onerror="this.src='/static/img/profile.png'"
+                        class="w-full h-full object-cover filter grayscale opacity-90 group-hover:opacity-100 group-hover:grayscale-0 transition-all duration-700 ease-out transform group-hover:scale-105">
+                    <div
+                        class="absolute inset-0 bg-gradient-to-t from-white via-white/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                    </div>
+
+                    <!-- Default state name badge (bottom) -->
+                    <div
+                        class="absolute bottom-6 left-6 right-6 bg-white/95 backdrop-blur-md rounded-2xl p-5 shadow-sm border border-gray-100 opacity-100 group-hover:opacity-0 transition-opacity duration-300 pointer-events-none">
+                        <h3 class="text-lg font-serif font-bold text-textmain">Siddharth T</h3>
+                        <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold mt-1">Former ML Dev</p>
+                    </div>
+
+                    <!-- Hover state detailed content -->
+                    <div
+                        class="absolute bottom-0 w-full p-8 pb-10 transform translate-y-6 group-hover:translate-y-0 transition-transform duration-500 ease-out opacity-0 group-hover:opacity-100">
+                        <h3 class="text-2xl font-serif font-bold text-textmain mb-1">Siddharth T</h3>
+                        <p class="text-[11px] text-primary uppercase tracking-widest mb-6 font-bold">Former ML Dev</p>
+                        <div class="flex gap-5">
+                            <a href="https://sudosidd.dev/" target="_blank" rel="noopener noreferrer"
+                                class="text-textmain/60 hover:text-primary transition-colors"><i
+                                    class="fas fa-globe text-xl"></i></a>
+                            <a href="https://github.com/sudo-sidd" target="_blank" rel="noopener noreferrer"
+                                class="text-textmain/60 hover:text-primary transition-colors"><i
+                                    class="fab fa-github text-xl"></i></a>
+                            <a href="https://www.linkedin.com/in/sudo-sidd/" target="_blank" rel="noopener noreferrer"
+                                class="text-textmain/60 hover:text-primary transition-colors"><i
+                                    class="fab fa-linkedin-in text-xl"></i></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ══ Minimal Footer ══ -->
+    <footer class="border-t border-bordercolor bg-bglight py-12 relative z-10">
+        <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="flex items-center gap-2.5 font-serif italic text-gray-500 text-lg">
+                <img src="/static/img/image.png" alt="Logo" class="w-6 h-6 object-contain rounded-md">
+                Smart Faculty Attendance System.
+            </div>
+            <p
+                class="text-[10px] uppercase tracking-[0.2em] text-gray-400 font-bold flex items-center justify-center gap-2">
+                &copy; 2026 Crafted at <a href="https://siet.ac.in" target="_blank" rel="noopener noreferrer"
+                    class="text-green-600 hover:underline">Sri Shakthi Institute of Engineering &amp;
+                    Technology</a>
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Intersection Observer for scroll animations
+            const obs = new IntersectionObserver((entries) => {
+                entries.forEach(e => {
+                    if (e.isIntersecting) {
+                        e.target.classList.add('visible');
+                        obs.unobserve(e.target);
+                    }
+                });
+            }, { threshold: 0.1, rootMargin: "0px 0px -50px 0px" });
+
+            document.querySelectorAll('.fade-up').forEach(el => obs.observe(el));
+        });
+    </script>
+</body>
+
+</html>
+

@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -16,9 +16,11 @@ from api.routes.models.attendance import (
     AttendanceEventOut,
     AttendanceStatus,
     AttendanceToday,
+    StaffDailyReport,
+    StaffDailyReportItem,
 )
 from api.services import attendance as svc
-from database.models import AttendanceEvent, AttendanceType, User
+from database.models import AttendanceEvent, AttendanceType, Role, User, utcnow
 from database.session import get_db
 
 router = APIRouter(prefix="/attendance", tags=["attendance"])
@@ -129,3 +131,113 @@ def all_events(
             row.full_name, row.employee_id = u.full_name, u.employee_id
         out.append(row)
     return AttendanceEventList(items=out, total=total, limit=limit, offset=offset)
+
+
+@router.get(
+    "/daily-report",
+    response_model=StaffDailyReport,
+    dependencies=[Depends(require(Permission.attendance_read_any))],
+)
+def daily_staff_report(
+    db: DB,
+    work_date: date | None = None,
+) -> StaffDailyReport:
+    """Admin report: lists every staff member with today's (or given date's) check-in, check-out, and total time."""
+    day = work_date or svc.today()
+    now_utc = utcnow()
+    is_today = day == svc.today()
+
+    staff_users = db.scalars(
+        select(User)
+        .where(User.role != Role.system, User.is_active.is_(True))
+        .order_by(User.full_name)
+    ).all()
+
+    events = db.scalars(
+        select(AttendanceEvent)
+        .where(AttendanceEvent.work_date == day)
+        .order_by(AttendanceEvent.user_id, AttendanceEvent.occurred_at)
+    ).all()
+
+    user_events: dict[int, list[AttendanceEvent]] = {}
+    for ev in events:
+        user_events.setdefault(ev.user_id, []).append(ev)
+
+    items: list[StaffDailyReportItem] = []
+    present_count = 0
+    currently_in_count = 0
+
+    for u in staff_users:
+        u_events = user_events.get(u.id, [])
+        first_in: datetime | None = None
+        last_out: datetime | None = None
+
+        for ev in u_events:
+            if ev.event_type == AttendanceType.check_in and first_in is None:
+                first_in = ev.occurred_at
+            elif ev.event_type == AttendanceType.check_out:
+                last_out = ev.occurred_at
+
+        total_sec = 0
+        open_in: datetime | None = None
+        for ev in u_events:
+            if ev.event_type == AttendanceType.check_in:
+                if open_in is None:
+                    open_in = ev.occurred_at
+            elif ev.event_type == AttendanceType.check_out:
+                if open_in is not None:
+                    diff = (ev.occurred_at - open_in).total_seconds()
+                    if diff > 0:
+                        total_sec += int(diff)
+                    open_in = None
+
+        is_in = False
+        if open_in is not None:
+            is_in = True
+            if is_today:
+                diff = (now_utc - open_in).total_seconds()
+                if diff > 0:
+                    total_sec += int(diff)
+
+        if not u_events:
+            status_str = "absent"
+            formatted_time = "-"
+        elif is_in:
+            status_str = "checked_in"
+            present_count += 1
+            currently_in_count += 1
+            hrs = total_sec // 3600
+            mins = (total_sec % 3600) // 60
+            formatted_time = f"{hrs}h {mins}m"
+        else:
+            status_str = "checked_out"
+            present_count += 1
+            hrs = total_sec // 3600
+            mins = (total_sec % 3600) // 60
+            formatted_time = f"{hrs}h {mins}m"
+
+        items.append(
+            StaffDailyReportItem(
+                user_id=u.id,
+                full_name=u.full_name,
+                email=u.email,
+                employee_id=u.employee_id,
+                department=u.department.name if u.department else None,
+                first_check_in=first_in,
+                last_check_out=last_out,
+                total_seconds=total_sec,
+                total_time_formatted=formatted_time,
+                is_checked_in=is_in,
+                status=status_str,
+            )
+        )
+
+    absent_count = len(staff_users) - present_count
+    return StaffDailyReport(
+        work_date=day,
+        items=items,
+        total_staff=len(staff_users),
+        present_count=present_count,
+        currently_in_count=currently_in_count,
+        absent_count=absent_count,
+    )

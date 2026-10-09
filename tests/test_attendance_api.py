@@ -182,3 +182,39 @@ def test_redis_down_fails_closed(client, monkeypatch):
     monkeypatch.setattr(svc.face_verification, "consume", boom)
     assert client.get(f"{P}/attendance/me/status", headers=h).status_code == 503
     assert client.post(f"{P}/attendance/check-in", headers=h).status_code == 503
+
+
+def test_daily_staff_report(client, faces):
+    u1 = make_user("staff1@x.com")
+    u2 = make_user("staff2@x.com")
+    admin = make_user("admin_rep@x.com", Role.admin)
+    h_u1 = auth(client, "staff1@x.com")
+    h_admin = auth(client, "admin_rep@x.com")
+
+    # Before check-in: both absent
+    rep = client.get(f"{P}/attendance/daily-report", headers=h_admin).json()
+    assert rep["total_staff"] >= 2
+    item1 = next(i for i in rep["items"] if i["user_id"] == u1)
+    assert item1["status"] == "absent" and item1["first_check_in"] is None
+
+    # u1 checks in
+    faces.add(u1)
+    assert client.post(f"{P}/attendance/check-in", headers=h_u1).status_code == 201
+
+    rep_after = client.get(f"{P}/attendance/daily-report", headers=h_admin).json()
+    item1_after = next(i for i in rep_after["items"] if i["user_id"] == u1)
+    assert item1_after["status"] == "checked_in"
+    assert item1_after["first_check_in"] is not None
+    assert item1_after["is_checked_in"] is True
+    assert item1_after["total_time_formatted"] != "-"
+
+    # u1 checks out
+    faces.add(u1)
+    assert client.post(f"{P}/attendance/check-out", headers=h_u1).status_code == 201
+
+    rep_out = client.get(f"{P}/attendance/daily-report", headers=h_admin).json()
+    item1_out = next(i for i in rep_out["items"] if i["user_id"] == u1)
+    assert item1_out["status"] == "checked_out"
+    assert item1_out["last_check_out"] is not None
+    assert item1_out["is_checked_in"] is False
+

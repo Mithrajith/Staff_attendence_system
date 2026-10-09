@@ -38,6 +38,7 @@ class User(Base):
     department_id: Mapped[int | None] = mapped_column(ForeignKey("departments.id"), nullable=True, index=True)
     department: Mapped[Department | None] = relationship(lazy="joined")
     full_name: Mapped[str] = mapped_column(String(120))
+    mobile_number: Mapped[str | None] = mapped_column(String(20), nullable=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     role: Mapped[Role] = mapped_column(
         SAEnum(Role, native_enum=False, length=16, values_callable=lambda e: [m.value for m in e]),

@@ -1,9 +1,11 @@
 import logging
 import os
 from contextlib import AsyncExitStack, asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
 from api.core.config import get_settings
@@ -60,6 +62,13 @@ def create_app() -> FastAPI:
 
     app.include_router(v1_router, prefix=s.api_prefix)
     app.include_router(web.router)
+
+    static_dir = Path(__file__).resolve().parent / "static"
+    if not static_dir.exists():
+        static_dir = Path(__file__).resolve().parent.parent / "static"
+    if static_dir.exists():
+        app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
 
     if s.inference_mount_enabled:
         # Imported lazily: pulls in torch/ultralytics. The flag makes inference defer CORS to this app.

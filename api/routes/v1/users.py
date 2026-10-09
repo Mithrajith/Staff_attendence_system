@@ -39,6 +39,7 @@ def create_user(
         username=body.username,
         employee_id=body.employee_id,
         department_id=body.department_id,
+        mobile_number=body.mobile_number,
         full_name=body.full_name,
         role=body.role,
         password_hash=hash_password(body.password or generate_temp_password()),

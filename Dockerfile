@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1.7
-
 # ---- builder: resolve and install locked dependencies into /opt/venv ------------------------------
 FROM python:3.12-slim AS builder
 
@@ -66,10 +64,10 @@ RUN sed -i 's/\r$//' /usr/local/bin/entrypoint.sh \
     && chown -R app:app /data /var/log/staff-attendance /models /app/testing
 
 USER app
-EXPOSE 8000
+EXPOSE 5860
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=90s --retries=5 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=4)"
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5860/healthz', timeout=4)"
 
 ENTRYPOINT ["entrypoint.sh"]
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "5860", "--no-access-log"]
