@@ -7,6 +7,8 @@ from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
+from starlette.datastructures import MutableHeaders
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from api.core.config import get_settings
 from api.core.logs import RequestLogMiddleware, setup_logging
@@ -15,6 +17,41 @@ from api.routes.v1.router import router as v1_router
 from database.session import get_engine
 
 logger = logging.getLogger("api.main")
+
+
+class SecurityHeadersMiddleware:
+    """Applies production security headers across all HTTP responses."""
+
+    def __init__(self, app: ASGIApp, is_production: bool = False):
+        self.app = app
+        self.is_production = is_production
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+
+        async def send_wrapper(message):
+            if message["type"] == "http.response.start":
+                headers = MutableHeaders(scope=message)
+                headers["X-Content-Type-Options"] = "nosniff"
+                headers["X-XSS-Protection"] = "1; mode=block"
+                headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+                if self.is_production:
+                    headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+            await send(message)
+
+        await self.app(scope, receive, send_wrapper)
+
+
+class CachedStaticFiles(StaticFiles):
+    """StaticFiles with Cache-Control headers for production performance."""
+
+    async def get_response(self, path: str, scope: Scope):
+        response = await super().get_response(path, scope)
+        if response.status_code == 200:
+            response.headers["Cache-Control"] = "public, max-age=86400, immutable"
+        return response
+
 
 
 @asynccontextmanager
@@ -48,6 +85,7 @@ def create_app() -> FastAPI:
             allow_methods=["GET", "POST", "PUT", "DELETE"],
             allow_headers=["Authorization", "Content-Type"],
         )
+    app.add_middleware(SecurityHeadersMiddleware, is_production=s.is_production)
     app.add_middleware(RequestLogMiddleware)  # added last = outermost, so it sees every response
 
     @app.get("/healthz", include_in_schema=False)
@@ -67,7 +105,7 @@ def create_app() -> FastAPI:
     if not static_dir.exists():
         static_dir = Path(__file__).resolve().parent.parent / "static"
     if static_dir.exists():
-        app.mount("/static", StaticFiles(directory=static_dir), name="static")
+        app.mount("/static", CachedStaticFiles(directory=static_dir), name="static")
 
 
     if s.inference_mount_enabled:

@@ -1,0 +1,162 @@
+# =============================================================================
+# Production Docker Compose Configuration
+# =============================================================================
+# Usage:
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+# =============================================================================
+
+services:
+  app:
+    build:
+      context: .
+      args:
+        APP_UID: ${APP_UID:-1000}
+        APP_GID: ${APP_GID:-1000}
+        TORCH_INDEX_URL: ${TORCH_INDEX_URL-https://download.pytorch.org/whl/cpu}
+    image: staff-attendance-app:production
+    container_name: staff_attendance_app
+    restart: always
+    env_file:
+      - .env.production
+    environment:
+      APP_ENV: production
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      REDIS_URL: redis://redis:6379/0
+      QDRANT_URL: http://qdrant:6333
+      MYSQL_ROOT_PASSWORD: ""
+      MEDIA_DIR: /data/media
+      LOG_DIR: /var/log/staff-attendance
+      MODELS_DIR: /models/yolo
+      TORCH_HOME: /models/torch
+      YOLO_CONFIG_DIR: /models/ultralytics
+    command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "5860", "--no-access-log"]
+    ports:
+      - "${APP_PORT:-5860}:5860"
+    volumes:
+      - ${MEDIA_HOST_DIR:-./media}:/data/media
+      - ${LOG_HOST_DIR:-./logs}:/var/log/staff-attendance
+      - model_cache:/models
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    networks:
+      - backend
+      - edge
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    deploy:
+      resources:
+        limits:
+          memory: 4096M
+        reservations:
+          memory: 1024M
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:5860/healthz', timeout=4)\""]
+      interval: 15s
+      timeout: 5s
+      start_period: 90s
+      retries: 5
+
+  mysql:
+    image: mysql:8.4
+    container_name: staff_attendance_mysql
+    restart: always
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env.production}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-staff_attendance}
+      MYSQL_USER: ${MYSQL_USER:-staff_app}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env.production}
+    volumes:
+      - ${MYSQL_DATA_DIR:-./mysql_data}:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - backend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+        reservations:
+          memory: 512M
+
+  redis:
+    image: redis:7-alpine
+    container_name: face_recognition_redis
+    restart: always
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - ${REDIS_DATA_DIR:-./redis_data}:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - backend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant_db
+    restart: always
+    environment:
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:?set QDRANT_API_KEY in .env.production}
+    volumes:
+      - ${QDRANT_DATA_DIR:-./qdrant_data}:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - backend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    deploy:
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 512M
+
+networks:
+  backend:
+    internal: true
+  edge:
+    driver: bridge
+
+volumes:
+  model_cache:
+
