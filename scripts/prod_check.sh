@@ -33,6 +33,15 @@ check() {
   fi
 }
 
+# Detect protocol (HTTPS vs HTTP)
+if curl -skf "https://127.0.0.1:${PORT}/healthz" > /dev/null 2>&1; then
+  PROTO="https"
+  CURL_FLAGS="-skf"
+else
+  PROTO="http"
+  CURL_FLAGS="-sf"
+fi
+
 # 1. Check Docker status
 check "Docker daemon" "docker info"
 
@@ -44,13 +53,17 @@ check "Qdrant container running" "docker ps --format '{{.Names}}' | grep -q '^qd
 # 3. Check App Container
 check "App container running" "docker ps --format '{{.Names}}' | grep -q '^staff_attendance_app$'"
 
-# 4. Check Health Endpoint
-check "API healthz endpoint (HTTP 200)" "curl -sf http://127.0.0.1:${PORT}/healthz"
+# 4. Check SSL Certificates if enabled
+if [ -d "${PROJECT_ROOT}/ssl" ]; then
+  check "SSL private key exists" "[ -f '${PROJECT_ROOT}/ssl/server.key' ]"
+  check "SSL certificate exists & valid" "openssl x509 -in '${PROJECT_ROOT}/ssl/server.crt' -noout -checkend 86400"
+fi
 
-# 5. Check Web Route
-check "Web root endpoint (HTTP 200)" "curl -sf http://127.0.0.1:${PORT}/"
-check "About page endpoint (HTTP 200)" "curl -sf http://127.0.0.1:${PORT}/about"
-check "Favicon static asset (HTTP 200)" "curl -sf http://127.0.0.1:${PORT}/static/img/image.png"
+# 5. Check Health & Web Endpoints
+check "API healthz endpoint (${PROTO^^} 200)" "curl $CURL_FLAGS ${PROTO}://127.0.0.1:${PORT}/healthz"
+check "Web root endpoint (${PROTO^^} 200)" "curl $CURL_FLAGS ${PROTO}://127.0.0.1:${PORT}/"
+check "About page endpoint (${PROTO^^} 200)" "curl $CURL_FLAGS ${PROTO}://127.0.0.1:${PORT}/about"
+check "Favicon static asset (${PROTO^^} 200)" "curl $CURL_FLAGS ${PROTO}://127.0.0.1:${PORT}/static/img/image.png"
 
 # 6. Check Directories
 check "Media directory exists & writable" "[ -w '${PROJECT_ROOT}/media' ]"

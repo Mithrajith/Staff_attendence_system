@@ -27,12 +27,14 @@ services:
       LOG_DIR: /var/log/staff-attendance
       MODELS_DIR: /models/yolo
       TORCH_HOME: /models/torch
-      YOLO_CONFIG_DIR: /models/ultralytics
+      SSL_ENABLED: "${SSL_ENABLED:-true}"
+      SSL_KEYFILE: /ssl/server.key
+      SSL_CERTFILE: /ssl/server.crt
     command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "5860", "--no-access-log"]
     ports:
       - "${APP_PORT:-5860}:5860"
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:5860/healthz', timeout=4)\""]
+      test: ["CMD-SHELL", "python -c \"import urllib.request, ssl; ctx = ssl._create_unverified_context(); urllib.request.urlopen('https://127.0.0.1:5860/healthz', context=ctx, timeout=4)\" 2>/dev/null || python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:5860/healthz', timeout=4)\""]
       interval: 15s
       timeout: 5s
       start_period: 90s
@@ -40,6 +42,7 @@ services:
     volumes:
       - ${MEDIA_HOST_DIR:-./media}:/data/media
       - ${LOG_HOST_DIR:-./logs}:/var/log/staff-attendance
+      - ${SSL_HOST_DIR:-./ssl}:/ssl:ro
       - model_cache:/models
     depends_on:
       mysql:
