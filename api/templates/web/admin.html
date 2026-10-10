@@ -695,10 +695,10 @@
     </a>
 
     <div style="height:1px; background:var(--border-light); margin:8px 6px;"></div>
-    <a href="/about" id="nav-about">
+    <!-- <a href="/about" id="nav-about">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
       Our Story &amp; About
-    </a>
+    </a> -->
   </nav>
 </aside>
 
@@ -861,11 +861,10 @@ async function overview() {
       h("h3", {}, "Recent activity — last 30 days"),
       h("div", { class: "scroll" },
         h("table", {},
-          h("thead", {}, h("tr", {}, ["Time", "Name", "Employee ID", "Event"].map((t) => h("th", {}, t)))),
+          h("thead", {}, h("tr", {}, ["Time", "Name", "Event"].map((t) => h("th", {}, t)))),
           h("tbody", {}, ev.items.map((e) => h("tr", {},
             h("td", { class: "nowrap muted" }, fmt(e.occurred_at)),
             h("td", {}, e.full_name || "User " + e.user_id),
-            h("td", { class: "muted" }, e.employee_id || "-"),
             h("td", {}, chip(e.event_type === "check_in" ? "Check in" : "Check out", e.event_type === "check_in" ? "green" : "red"))
           )))
         )
@@ -891,9 +890,8 @@ async function reports() {
     if (qLower) {
       const matchName = (item.full_name || "").toLowerCase().includes(qLower);
       const matchEmail = (item.email || "").toLowerCase().includes(qLower);
-      const matchEmp = (item.employee_id || "").toLowerCase().includes(qLower);
       const matchId = String(item.user_id) === qLower;
-      if (!matchName && !matchEmail && !matchEmp && !matchId) return false;
+      if (!matchName && !matchEmail && !matchId) return false;
     }
     if (R.dept && item.department !== R.dept) return false;
     if (R.status) {
@@ -924,7 +922,7 @@ async function reports() {
     ),
     h("div", { class: "field-group grow" },
       h("label", {}, "Search Staff"),
-      h("input", { name: "q", value: R.q, placeholder: "Search by name, email, or employee ID..." })
+      h("input", { name: "q", value: R.q, placeholder: "Search by name, email, or ID..." })
     ),
     h("div", { class: "field-group" },
       h("label", {}, "Department"),
@@ -1013,8 +1011,7 @@ async function reports() {
         h("div", { class: "staff-cell" },
           h("div", { class: "staff-avatar-sm" }, initial),
           h("div", {},
-            h("div", { style: "font-weight:500;color:var(--text)" }, u.full_name),
-            u.employee_id ? h("div", { class: "muted", style: "font-size:11px" }, "ID: " + u.employee_id) : null
+            h("div", { style: "font-weight:500;color:var(--text)" }, u.full_name)
           )
         )
       ),
@@ -1120,7 +1117,6 @@ async function openFacultyHistory(user) {
             h("h2", {}, user.full_name),
             h("p", {},
               user.email,
-              user.employee_id ? " • ID: " + user.employee_id : "",
               user.department ? " • Dept: " + user.department : "",
               " • Staff ID #" + user.user_id
             )
@@ -1274,7 +1270,7 @@ async function users() {
     e.preventDefault(); const f = new FormData(e.target);
     Object.assign(U, { q: f.get("q").trim(), role: f.get("role"), is_active: f.get("is_active"), offset: 0 }); render();
   } },
-    h("div", { class: "field-group grow" }, h("label", {}, "Search"), h("input", { name: "q", value: U.q, placeholder: "Name, email, username, employee ID" })),
+    h("div", { class: "field-group grow" }, h("label", {}, "Search"), h("input", { name: "q", value: U.q, placeholder: "Name, email, or username" })),
     h("div", { class: "field-group" }, h("label", {}, "Role"), sel("role", [["", "All roles"], ["admin", "Admin"], ["system", "System"], ["staff", "Staff"]], U.role)),
     h("div", { class: "field-group" }, h("label", {}, "Status"), sel("is_active", [["", "All"], ["true", "Active"], ["false", "Inactive"]], U.is_active)),
     h("button", { type: "submit" }, "Search"),
@@ -1282,7 +1278,7 @@ async function users() {
   const rows = list.items.map((u) => {
     const self = u.id === me.id;
     return [
-      String(u.id), u.full_name, u.username || "-", u.email, u.employee_id || "-",
+      String(u.id), u.full_name, u.username || "-", u.email,
       u.department ? u.department.name : "-", u.role,
       chip(u.is_active ? "Active" : "Inactive", u.is_active ? "green" : "gray"),
       chip(u.face_enrolled ? "Yes" : "No", u.face_enrolled ? "green" : "gray"),
@@ -1296,7 +1292,7 @@ async function users() {
   return [
     h("div", { class: "page-header" }, h("h2", {}, "Users")),
     filters,
-    table(["ID", "Name", "Username", "Email", "Employee ID", "Dept", "Role", "Status", "Face", "Last login", ""], rows),
+    table(["ID", "Name", "Username", "Email", "Dept", "Role", "Status", "Face", "Last login", ""], rows),
     pager(U, list.total, limit, render)
   ];
 }
@@ -1320,7 +1316,6 @@ function addUser() {
     { name: "full_name", label: "Full name", required: true },
     { name: "role", label: "Role", options: [["staff", "staff"], ["admin", "admin"], ["system", "system"]], value: "staff" },
     { name: "username", label: "Username (optional)" },
-    { name: "employee_id", label: "Employee ID (optional)" },
     { name: "department_id", label: "Department", options: deptOptions("None") },
     { name: "password", label: "Password (blank: email a temporary one)", type: "password", minlength: 10 },
   ], "Create", async (v) => {
@@ -1379,11 +1374,11 @@ async function attendance() {
     h("div", { class: "field-group" }, h("label", {}, "User ID"), h("input", { name: "user_id", type: "number", min: 1, value: A.user_id, style: "max-width:90px" })),
     h("button", { type: "submit" }, "Apply"));
   const rows = events
-    ? data.items.map((e) => [fmt(e.occurred_at), String(e.user_id), e.full_name || "-", e.employee_id || "-",
+    ? data.items.map((e) => [fmt(e.occurred_at), String(e.user_id), e.full_name || "-",
         chip(e.event_type === "check_in" ? "Check in" : "Check out", e.event_type === "check_in" ? "green" : "red"),
         e.face_confidence == null ? "-" : e.face_confidence.toFixed(2)])
-    : data.items.map((r) => [r.work_date, String(r.user_id), r.full_name, r.employee_id || "-", fmt(r.first_check_in), fmt(r.last_check_out), r.check_in_count + " / " + r.check_out_count]);
-  const head = events ? ["Time", "User ID", "Name", "Employee ID", "Event", "Face match"] : ["Date", "User ID", "Name", "Employee ID", "First check-in", "Last check-out", "In / out"];
+    : data.items.map((r) => [r.work_date, String(r.user_id), r.full_name, fmt(r.first_check_in), fmt(r.last_check_out), r.check_in_count + " / " + r.check_out_count]);
+  const head = events ? ["Time", "User ID", "Name", "Event", "Face match"] : ["Date", "User ID", "Name", "First check-in", "Last check-out", "In / out"];
   return [
     h("div", { class: "page-header" }, h("h2", {}, "Attendance Logs")),
     filters,

@@ -548,12 +548,12 @@
 </style>
 </head>
 <body>
-<header style="position: absolute; top: 16px; right: 20px; z-index: 100;">
+<!-- <header style="position: absolute; top: 16px; right: 20px; z-index: 100;">
   <a href="/about" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: var(--muted); text-decoration: none; padding: 6px 14px; border-radius: 18px; border: 1px solid var(--border); background: var(--surface); box-shadow: 0 1px 3px rgba(60,64,67,.08); transition: all .15s;" onmouseover="this.style.borderColor='var(--blue)'; this.style.color='var(--blue)'" onmouseout="this.style.borderColor='var(--border)'; this.style.color='var(--muted)'">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
     Our Story / About
   </a>
-</header>
+</header> -->
 <main>
   <div class="brand">
     <div class="brand-icon" style="background:#fff; border:1px solid var(--border); box-shadow:0 1px 3px rgba(60,64,67,.12); padding:6px;">
@@ -641,10 +641,19 @@
         <div class="field-error" id="s-email-err"></div>
       </div>
 
-      <div class="field">
-        <label for="s-mobile">Mobile Number <span class="req">*</span></label>
-        <input id="s-mobile" type="tel" autocomplete="tel" required placeholder="10-digit number (e.g. 9876543210)">
-        <div class="field-error" id="s-mobile-err"></div>
+      <div class="form-row">
+        <div class="field">
+          <label for="s-mobile">Mobile Number <span class="req">*</span></label>
+          <input id="s-mobile" type="tel" autocomplete="tel" required placeholder="10-digit number (e.g. 9876543210)">
+          <div class="field-error" id="s-mobile-err"></div>
+        </div>
+        <div class="field">
+          <label for="s-dept">Department <span class="req">*</span></label>
+          <select id="s-dept" required>
+            <option value="">Select department</option>
+          </select>
+          <div class="field-error" id="s-dept-err"></div>
+        </div>
       </div>
 
       <div class="field">
@@ -847,7 +856,7 @@
   <div style="display:flex; align-items:center; justify-content:center; gap:8px;">
     <img src="/static/img/image.png" alt="Logo" style="width:16px; height:16px; object-fit:contain;">
     <a href="/about" style="color: var(--blue); text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 4px;">
-      Our Story &amp; About Faculty Attendance
+      About Faculty Attendance
     </a>
     <span style="color: var(--border);">•</span>
     <a href="https://siet.ac.in" target="_blank" rel="noopener noreferrer" style="color: var(--muted); text-decoration: none;">Sri Shakthi Institute of Engineering &amp; Technology</a>
@@ -922,11 +931,12 @@ function clearAllErrors() {
   document.querySelectorAll(".input-invalid").forEach((el) => { el.classList.remove("input-invalid"); });
 }
 
-// Live error clear on input
-["s-first", "s-last", "s-email", "s-mobile", "s-pass", "s-pass-confirm"].forEach((id) => {
+// Live error clear on input / change
+["s-first", "s-last", "s-email", "s-mobile", "s-dept", "s-pass", "s-pass-confirm"].forEach((id) => {
   const el = $(id);
   if (el) {
-    el.addEventListener("input", () => {
+    const evt = el.tagName === "SELECT" ? "change" : "input";
+    el.addEventListener(evt, () => {
       setFieldError(id, id + "-err", "");
       say("signupMsg", "");
     });
@@ -1065,6 +1075,22 @@ $("loginForm").addEventListener("submit", async (e) => {
   }
 });
 
+async function loadDepartments() {
+  try {
+    const list = await api("/departments");
+    const sel = $("s-dept");
+    if (sel && Array.isArray(list)) {
+      sel.innerHTML = '<option value="">Select department</option>';
+      list.forEach((d) => {
+        const label = d.code ? `${d.code} — ${d.name}` : d.name;
+        sel.add(new Option(label, d.id));
+      });
+    }
+  } catch (e) {
+    console.warn("Could not load departments:", e);
+  }
+}
+
 $("signupForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   clearAllErrors();
@@ -1074,6 +1100,7 @@ $("signupForm").addEventListener("submit", async (e) => {
   const lastName = $("s-last").value.trim();
   const email = $("s-email").value.trim();
   const mobile = $("s-mobile").value.trim();
+  const dept = $("s-dept").value;
   const pass = $("s-pass").value;
   const passConfirm = $("s-pass-confirm").value;
 
@@ -1109,6 +1136,11 @@ $("signupForm").addEventListener("submit", async (e) => {
     hasError = true;
   }
 
+  if (!dept) {
+    setFieldError("s-dept", "s-dept-err", "Please select your department.");
+    hasError = true;
+  }
+
   if (!pass) {
     setFieldError("s-pass", "s-pass-err", "Password is required.");
     hasError = true;
@@ -1135,6 +1167,7 @@ $("signupForm").addEventListener("submit", async (e) => {
         last_name: lastName,
         email: email,
         mobile_number: cleanMobile,
+        department_id: dept ? Number(dept) : null,
         password: pass
       }
     });
@@ -1347,6 +1380,8 @@ $("submit").addEventListener("click", async () => {
     renderShots();
   }
 });
+
+loadDepartments();
 
 // Linked from the portal when face recognition is not set up: resume with stored session.
 if (!resetToken && new URLSearchParams(location.search).has("enroll") && sessionStorage.getItem("token")) {

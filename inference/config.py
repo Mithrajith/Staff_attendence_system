@@ -19,7 +19,11 @@ logger = logging.getLogger("inference.config")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.abspath(os.path.join(BASE_DIR, ".."))
 MODELS_DIR = os.path.abspath(os.getenv("MODELS_DIR") or os.path.join(BASE_DIR, "models"))
-os.makedirs(MODELS_DIR, exist_ok=True)
+try:
+    os.makedirs(MODELS_DIR, exist_ok=True)
+except Exception as exc:
+    logger.warning("Could not create MODELS_DIR %s: %s", MODELS_DIR, exc)
+
 
 
 def _get_safe_device() -> torch.device:

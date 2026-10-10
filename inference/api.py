@@ -69,8 +69,13 @@ if os.getenv("INFERENCE_EMBEDDED", "false").lower() != "true":
         allow_headers=["*"],
     )
 
-os.makedirs(config.TESTING_UPLOADS_DIR, exist_ok=True)
-app.mount("/testing-ui", StaticFiles(directory=config.TESTING_DIR, html=True), name="testing-ui")
+try:
+    os.makedirs(config.TESTING_UPLOADS_DIR, exist_ok=True)
+    if os.path.isdir(config.TESTING_DIR):
+        app.mount("/testing-ui", StaticFiles(directory=config.TESTING_DIR, html=True), name="testing-ui")
+except Exception as exc:
+    logger.warning("Could not initialize testing-ui static files: %s", exc)
+
 
 
 def decode_base64_image(img_b64: str) -> Optional[np.ndarray]:
