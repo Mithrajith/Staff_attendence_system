@@ -9,13 +9,13 @@ DepartmentCode = Annotated[str, StringConstraints(strip_whitespace=True, pattern
 
 
 class DepartmentIn(BaseModel):
-    code: DepartmentCode
     name: DepartmentName
+    code: DepartmentCode | None = None
 
 
 class DepartmentOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    code: str
     name: str
+    code: str | None = None

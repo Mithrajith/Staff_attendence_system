@@ -839,7 +839,7 @@ function ask(title, fields, label, action, text) {
 }
 
 async function loadDepartments() { departments = await api("/departments"); }
-const deptOptions = (blank) => [["", blank], ...departments.map((d) => [d.id, d.code + " — " + d.name])];
+const deptOptions = (blank) => [["", blank], ...departments.map((d) => [d.id, d.name])];
 
 // ============================================================================
 // ---- Overview Tab ----
@@ -1335,8 +1335,8 @@ async function departmentsView() {
     h("div", { class: "page-header" },
       h("h2", {}, "Departments"),
       h("button", { type: "button", onclick: () => editDepartment() }, "Add department")),
-    table(["ID", "Code", "Name", ""], departments.map((d) => [
-      String(d.id), d.code, d.name,
+    table(["Department Name", ""], departments.map((d) => [
+      d.name,
       h("span", { class: "nowrap" },
         h("button", { type: "button", class: "link", onclick: () => editDepartment(d) }, "Edit"),
         h("button", { type: "button", class: "link danger", onclick: () => removeDepartment(d) }, "Delete"))
@@ -1344,13 +1344,65 @@ async function departmentsView() {
   ];
 }
 function editDepartment(d) {
-  ask(d ? "Edit department" : "Add department", [
-    { name: "code", label: "Code", value: d && d.code, required: true },
-    { name: "name", label: "Name", value: d && d.name, required: true },
-  ], "Save", async (v) => {
-    await api(d ? "/departments/" + d.id : "/departments", { method: d ? "PUT" : "POST", body: { code: v.code.trim(), name: v.name.trim() } });
-    notify("Department saved."); render(true);
-  });
+  if (d) {
+    ask("Edit Department", [
+      { name: "name", label: "Department Name", value: d.name, required: true },
+    ], "Save", async (v) => {
+      await api("/departments/" + d.id, { method: "PUT", body: { name: v.name.trim() } });
+      notify("Department saved."); render(true);
+    });
+    return;
+  }
+
+  // Adding new department with Next / Save & Add Another support
+  const dlg = $("dlg"), form = $("dlgForm");
+  form.replaceChildren(
+    h("h2", {}, "Add Department"),
+    h("p", { class: "muted", style: "font-size:13px;margin:0 0 12px" }, "Enter department name. Click 'Next' to save and immediately add another."),
+    h("div", { class: "field" },
+      h("label", {}, "Department Name"),
+      h("input", { name: "name", type: "text", required: true, autocomplete: "off", placeholder: "e.g. Mechanical Engineering" })
+    ),
+    h("div", { class: "row", style: "gap:8px;flex-wrap:wrap" },
+      h("button", { type: "submit", id: "btnSaveNext" }, "Save & Add Next \u2192"),
+      h("button", { type: "button", class: "secondary", onclick: async () => {
+        const inp = form.querySelector('input[name="name"]');
+        const val = inp ? inp.value.trim() : "";
+        if (!val) { $("dlgErr").textContent = "Department name is required."; return; }
+        try {
+          await api("/departments", { method: "POST", body: { name: val } });
+          notify(`Department "${val}" saved.`);
+          dlg.close();
+          render(true);
+        } catch (err) {
+          $("dlgErr").textContent = err.message;
+        }
+      }}, "Save & Close"),
+      h("button", { type: "button", class: "secondary", onclick: () => dlg.close() }, "Close")
+    ),
+    h("div", { id: "dlgErr", style: "color:var(--danger);font-size:12px;margin-top:8px" })
+  );
+
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const inp = form.querySelector('input[name="name"]');
+    const val = inp ? inp.value.trim() : "";
+    if (!val) { $("dlgErr").textContent = "Department name is required."; return; }
+    try {
+      await api("/departments", { method: "POST", body: { name: val } });
+      notify(`Department "${val}" saved! Enter next department:`);
+      inp.value = "";
+      inp.focus();
+      $("dlgErr").textContent = "";
+      await loadDepartments();
+      render(true);
+    } catch (err) {
+      $("dlgErr").textContent = err.message;
+    }
+  };
+
+  dlg.showModal();
+  setTimeout(() => { const inp = form.querySelector('input[name="name"]'); if (inp) inp.focus(); }, 60);
 }
 function removeDepartment(d) {
   ask("Delete department", [], "Delete", async () => { await api("/departments/" + d.id, { method: "DELETE" }); notify("Department deleted."); render(true); },

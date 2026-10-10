@@ -1082,8 +1082,7 @@ async function loadDepartments() {
     if (sel && Array.isArray(list)) {
       sel.innerHTML = '<option value="">Select department</option>';
       list.forEach((d) => {
-        const label = d.code ? `${d.code} — ${d.name}` : d.name;
-        sel.add(new Option(label, d.id));
+        sel.add(new Option(d.name, d.id));
       });
     }
   } catch (e) {

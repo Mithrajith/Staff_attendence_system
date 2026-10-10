@@ -17,6 +17,21 @@ DB = Annotated[Session, Depends(get_db)]
 Admin = Annotated[User, Depends(require(Permission.departments_manage))]
 
 
+import re
+
+
+def _generate_code(db: Session, name: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9]", "", name).upper()[:8]
+    if not cleaned:
+        cleaned = "DEPT"
+    base = cleaned
+    counter = 1
+    while db.scalar(select(Department).where(Department.code == base)):
+        base = f"{cleaned[:6]}{counter:02d}"
+        counter += 1
+    return base
+
+
 def _get_or_404(db: Session, department_id: int) -> Department:
     dept = db.get(Department, department_id)
     if dept is None:
@@ -42,7 +57,8 @@ def list_departments(db: DB) -> list[Department]:
 
 @router.post("", response_model=DepartmentOut, status_code=status.HTTP_201_CREATED)
 def create_department(body: DepartmentIn, db: DB, actor: Admin) -> Department:
-    dept = _save(db, Department(code=body.code, name=body.name))
+    code = body.code or _generate_code(db, body.name)
+    dept = _save(db, Department(code=code, name=body.name))
     audit("department_created", actor_id=actor.id, target_id=dept.id, code=dept.code)
     return dept
 
@@ -50,7 +66,9 @@ def create_department(body: DepartmentIn, db: DB, actor: Admin) -> Department:
 @router.put("/{department_id}", response_model=DepartmentOut)
 def update_department(department_id: int, body: DepartmentIn, db: DB, actor: Admin) -> Department:
     dept = _get_or_404(db, department_id)
-    dept.code, dept.name = body.code, body.name
+    if body.code:
+        dept.code = body.code
+    dept.name = body.name
     dept = _save(db, dept)
     audit("department_updated", actor_id=actor.id, target_id=dept.id, code=dept.code)
     return dept
