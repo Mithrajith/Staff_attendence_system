@@ -1278,7 +1278,7 @@ async function users() {
   const rows = list.items.map((u) => {
     const self = u.id === me.id;
     return [
-      String(u.id), u.full_name, u.username || "-", u.email,
+      String(u.id), u.full_name, u.email,
       u.department ? u.department.name : "-", u.role,
       chip(u.is_active ? "Active" : "Inactive", u.is_active ? "green" : "gray"),
       chip(u.face_enrolled ? "Yes" : "No", u.face_enrolled ? "green" : "gray"),
@@ -1292,7 +1292,7 @@ async function users() {
   return [
     h("div", { class: "page-header" }, h("h2", {}, "Users")),
     filters,
-    table(["ID", "Name", "Username", "Email", "Dept", "Role", "Status", "Face", "Last login", ""], rows),
+    table(["ID", "Name", "Email", "Dept", "Role", "Status", "Face", "Last login", ""], rows),
     pager(U, list.total, limit, render)
   ];
 }
