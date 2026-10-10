@@ -67,7 +67,7 @@ USER app
 EXPOSE 5860
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=90s --retries=5 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5860/healthz', timeout=4)"
+    CMD python -c "import urllib.request, ssl; ctx = ssl._create_unverified_context(); urllib.request.urlopen('https://127.0.0.1:5860/healthz', context=ctx, timeout=4)" 2>/dev/null || python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5860/healthz', timeout=4)"
 
 ENTRYPOINT ["entrypoint.sh"]
 CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "5860", "--no-access-log"]

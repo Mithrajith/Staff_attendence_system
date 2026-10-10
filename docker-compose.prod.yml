@@ -67,12 +67,6 @@ services:
           memory: 4096M
         reservations:
           memory: 1024M
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:5860/healthz', timeout=4)\""]
-      interval: 15s
-      timeout: 5s
-      start_period: 90s
-      retries: 5
 
   mysql:
     image: mysql:8.4

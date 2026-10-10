@@ -27,10 +27,11 @@ services:
       LOG_DIR: /var/log/staff-attendance
       MODELS_DIR: /models/yolo
       TORCH_HOME: /models/torch
+      YOLO_CONFIG_DIR: /models/ultralytics
       SSL_ENABLED: "${SSL_ENABLED:-true}"
       SSL_KEYFILE: /ssl/server.key
       SSL_CERTFILE: /ssl/server.crt
-    command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "5860", "--no-access-log"]
+    command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "5860", "--ssl-certfile", "/ssl/server.crt", "--ssl-keyfile", "/ssl/server.key", "--no-access-log"]
     ports:
       - "${APP_PORT:-5860}:5860"
     healthcheck:
